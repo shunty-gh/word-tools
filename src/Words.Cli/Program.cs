@@ -1,5 +1,9 @@
-// Phase 0 skeleton. The command surface — pattern, anagram, lexicon build, add, licence —
-// arrives in phase 6. See docs/plan-cli.md.
+using System.CommandLine;
+using Words.Cli;
 
-Console.Error.WriteLine("words: no commands are implemented yet (phase 0 skeleton).");
-return 2;
+// The solver commands — pattern, anagram, add, licence — arrive in phase 6.
+// See docs/plan-cli.md.
+var root = new RootCommand("Crossword and anagram solver.");
+root.Subcommands.Add(LexiconCommand.Create());
+
+return await root.Parse(args).InvokeAsync().ConfigureAwait(false);

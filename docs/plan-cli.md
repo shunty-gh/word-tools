@@ -7,18 +7,17 @@ MAUI and Blazor front ends consume it unchanged.
 See [CONTEXT.md](../CONTEXT.md) for the vocabulary used throughout, and
 [docs/adr](./adr) for the decisions that shape this.
 
-> ## ⚠️ Licensing must be cleared before deployment
+> ## Licensing — attribution required, no longer a blocker
 >
-> The app is in-house only for now, and building against these word lists is fine on that
-> basis. **Nediger's terms have not been verified** — its repository says the list is free
-> to use, but the LICENSE file itself could not be read. ESDB's terms *are* clear
-> (MIT-like, with a `Copyright` file of per-source attribution that must be reproduced).
+> Both sources were verified during phase 1 and both are permissive. **Nediger is MIT**
+> (Copyright © 2026 bewilderingly, read from its LICENSE file). **ESDB** explicitly permits
+> distributing "word lists created from it" provided its copyright notice travels with them.
 >
-> Resolve this **before any distribution**, and especially before an **Apple App Store**
-> submission, where redistribution rights over bundled data are examined and a rejection
-> costs a release cycle. Android and any public web deployment carry the same obligation.
-> If Nediger's terms cannot be confirmed, ESDB alone still yields a working app — see
-> [ADR 0004](./adr/0004-scowl-nediger-lexicon.md).
+> What remains is an **attribution obligation**: both notices must ship with anything
+> distributed, including an App Store submission. That is what `words licence` (phase 6) and
+> the MAUI/web About screens exist for — treat them as release requirements, not niceties.
+> Licence texts are vendored at `data/sources/nediger-LICENSE.txt` and
+> `data/sources/esdb-COPYRIGHT.txt`. See [ADR 0004](./adr/0004-scowl-nediger-lexicon.md).
 
 ## Layout
 
@@ -27,9 +26,10 @@ src/Words.Core/               engine: model, lexicon loading, indexes, queries
 src/Words.Lexicon.Building/   merges word lists in a directory into the artefact
 src/Words.Cli/                `words` executable
 tests/Words.Core.Tests/       xUnit, against a small hand-written lexicon
+tests/Words.Lexicon.Building.Tests/  reader parsing and merge behaviour
 tests/Words.Core.Benchmarks/  BenchmarkDotNet, holds the performance targets
 data/sources/                 pinned ESDB + Nediger lists, with their licence texts
-data/lexicon.*                generated artefact + manifest, committed
+data/lexicon.gz               generated artefact, with its manifest alongside
 ```
 
 `Directory.Build.props` sets nullable, implicit usings and warnings-as-errors;
@@ -37,38 +37,41 @@ data/lexicon.*                generated artefact + manifest, committed
 
 ## Phases
 
-### 0 — Skeleton
+### 0 — Skeleton ✅
 
-Solution, projects, props files, `.gitignore`, CI running build + test. Add a `CLAUDE.md`
-at this point: the earlier attempt was declined because there was nothing in the repo to
-describe, which is no longer true once this phase lands.
+Solution, projects, props files, `.gitignore`, CI running build + test, and `CLAUDE.md`.
 
-*Done when:* `dotnet build` and `dotnet test` both succeed on an empty test.
+*Done:* `dotnet build` and `dotnet test` both succeed; CI green on first run.
 
-### 1 — Lexicon
+### 1 — Lexicon ✅
 
-Generate the ESDB lists through `app.aspell.net/create` with **both British dialects**
-(`-ise`/traditional and `-ize`/Oxford), **size 80**, **spelling variants above the default
-level 1**, and **diacritics retained**. Vendor those outputs alongside the Nediger list
-under `data/sources/`, each with its licence text, and record the exact generator options
-in the manifest — they are not reconstructable from the output.
+ESDB lists generated through `app.aspell.net/create` — both British dialects, size 80,
+variant level 8, diacritics retained, roman numerals in, hacker terms out — and vendored
+alongside the Nediger list under `data/sources/` with both licence texts. Each generated
+file carries a header recording its own parameters, so the options are self-documenting
+rather than needing to be restated.
 
-`Words.Lexicon.Building` reads *every* list in a directory rather than two hard-coded
-files. For each entry it derives the search key, kinds and racy flag; merges and
-deduplicates on search key; normalises each source's scoring onto one 0–100 `Score`;
-retains provenance; and emits a compressed artefact plus a manifest of source names,
-versions, generator options and per-source entry counts.
+All five ESDB size bands are vendored, not just size 80: the inline lists carry no
+per-entry score, and since the bands are cumulative supersets, the smallest band an entry
+appears in reconstructs the missing frequency signal.
 
-Score normalisation is the judgement call. Nediger's four bands (99 / 51 / 49 / 25) and
-ESDB's size tiers measure different things ([ADR 0004](./adr/0004-scowl-nediger-lexicon.md)),
-so the mapping is a documented decision in the builder, not an incidental formula.
+`Words.Lexicon.Building` reads *every* list in a directory, identifying each file by
+content rather than name, so licence and readme files are skipped without configuration.
+Entries deduplicate on **display form** — not search key, which would collapse `Polish`
+into `polish` — merging provenance and taking the most generous score.
 
-*Done when:* the artefact and manifest are committed, entry counts reported per source,
-and spot checks pass — a phrase entry keeping its spaces in the display form, `PODCAST`
-and `REALIZE` and `REALISE` all present, `NAÏVE` displayed with its diaeresis but keyed as
-`NAIVE`, and racy-flagged entries excluded by default.
+*Done.* 500,451 entries: 286,839 single words, 213,612 phrases, 121,152 proper nouns,
+1,257 racy, 5 discarded for having no letters. Artefact 2.1 MB compressed. Spot checks
+pass: `red herring` keeps its space, `podcast`/`realise`/`realize` all present, `naïve`
+displays its diaeresis while keying as `NAIVE`, `Polish` and `polish` both survive.
+62 tests green.
 
 ### 2 — Model and indexes
+
+Partly delivered by phase 1, which needed it: `Entry`, `EntryKinds`, `Sources`,
+`SearchKeys` (normalisation and canonical form) and `LexiconArtefact` (stream-based read
+and write) already exist and are tested. What remains is the `Lexicon` type itself, the two
+indexes, `ILexiconSource`, `IPersonalWordStore`, and the CLI composition root.
 
 ```csharp
 public sealed record Entry(
@@ -207,9 +210,12 @@ Two deliberate future openings, neither built now:
   FTS5 — unlike the lexicon, which is not,
   [ADR 0005](./adr/0005-clue-databases-deferred.md).
 
-Memory is the one open concern for mobile: ~500k entries as C# objects is roughly 100MB
-with index overhead. The mitigation is a flat backing store with offsets rather than
-per-entry objects, behind `ILexiconSource`. Measure on a real device before building it.
+Memory is the one open concern for mobile, and phase 1 made it more pressing rather than
+less: the lexicon came in at 500,451 entries, marginally past the ceiling this design was
+sized against, and Nediger ships weekly updates so it will keep growing. As C# objects that
+is roughly 100MB with index overhead. The mitigation is a flat backing store with offsets
+rather than per-entry objects, behind `ILexiconSource`. Measure on a real device before
+building it.
 
 ## Decisions
 
@@ -218,10 +224,13 @@ per-entry objects, behind `ILexiconSource`. Measure on a real device before buil
 | Stack | C#, .NET 10 LTS; engine targets plain `net10.0` |
 | Lexicon | ESDB 2026.02.25 (formerly SCOWL) as spine + Nediger, merged offline, committed |
 | Dialect | Both British variants, `-ise`/traditional and `-ize`/Oxford |
-| Size / variants | Size 80 of 35–85; spelling variants above default level 1 |
+| Size / variants | Size 80 of 35–85; variant level 8; roman numerals in, hacker terms out |
+| ESDB bands | All five sizes vendored; smallest band an entry appears in gives its score |
 | Diacritics | Retained in source and display form; stripped into the search key |
 | Rejected sources | UKACD (frozen 1999), Broda (US, unverified — fallback), xd (no licence) |
+| Licences | Nediger MIT; ESDB permits derived word lists. Attribution required |
 | Entry model | Display form + search key; kinds and racy flag derived; source retained |
+| Deduplication | On display form, not search key — `Polish` and `polish` both survive |
 | Score | One 0–100 scale, normalised per source. Not frequency |
 | Loading | Ordered collection of sources; personal words are a source |
 | Storage | Compressed artefact + in-memory indexes. No SQLite for the lexicon |
@@ -240,8 +249,12 @@ per-entry objects, behind `ILexiconSource`. Measure on a real device before buil
 
 ## Risks
 
-**Licence verification.** The headline risk, deferred rather than solved — see the warning
-above. Blocks distribution, not development.
+**~~Licence verification~~ — resolved in phase 1.** Both sources are permissive; what
+remains is an attribution obligation, see the note at the top.
+
+**Lexicon size exceeded its assumption.** 500,451 entries against a design sized for
+"≤ 500k", and Nediger grows weekly. Not a problem on desktop; it moves the mobile memory
+question from "later" to "before MAUI ships".
 
 **ESDB is mid-restructure.** The 2026.02.25 release replaced separate text lists with a
 master file plus SQLite and warns that existing scripts will break; a further release is
@@ -249,13 +262,14 @@ expected once the architecture settles. Generating through the customisation too
 insulates us for now, but not permanently — pin the vendored output and treat a
 regeneration as a deliberate act.
 
-**Acquiring the sources.** Broda's site has an expired certificate, and Nediger's entry
-count and English variant were never established. Inspect what actually arrives before
-phase 1 is considered done.
-
 **Derived classifications.** Entry kinds are inferred from spaces and capitalisation, and
-the racy flag from a single Nediger score band. Both will misfile some entries. Sample the
-artefact once it exists rather than trusting the heuristics.
+the racy flag from a single Nediger score band, so some entries will be misfiled — 121,152
+entries are currently classed as proper nouns on the strength of a leading capital alone.
+Worth sampling before the results are trusted in anger.
+
+**Nediger is young and hand-typed.** First uploaded June 2026, and its author explicitly
+warns of remaining typos. Weekly updates mean regenerating is cheap; it also means the
+artefact goes stale quietly.
 
 **Composition result volume.** Search cost is fine; the number of valid splits is the
 problem. The cap and ranking in phase 5 are the mitigation, and phase 7's benchmarks should

@@ -7,5 +7,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Words.Core.Benchmarks/Words.Core.Benchmarks.csproj" />
     <Project Path="tests/Words.Core.Tests/Words.Core.Tests.csproj" />
+    <Project Path="tests/Words.Lexicon.Building.Tests/Words.Lexicon.Building.Tests.csproj" />
   </Folder>
 </Solution>

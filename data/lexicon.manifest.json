@@ -1,0 +1,46 @@
+{
+  "Sources": [
+    {
+      "Reader": "ESDB",
+      "File": "esdb-gb-var8-size35-2026.02.25.txt",
+      "Sha256": "103a32e2c43c548737f9bce57f6cab8e6608616fa79bcf57562a95bb5876cc86",
+      "EntriesRead": 45290
+    },
+    {
+      "Reader": "ESDB",
+      "File": "esdb-gb-var8-size50-2026.02.25.txt",
+      "Sha256": "4684ea31b0659fc6ec9bb3250a3d2a687e22757d30c101a0f2f3c811ede31e15",
+      "EntriesRead": 91605
+    },
+    {
+      "Reader": "ESDB",
+      "File": "esdb-gb-var8-size60-2026.02.25.txt",
+      "Sha256": "db4686ad890168b7bd55f728472e3500a6c3457853524f62836a49ac93beb561",
+      "EntriesRead": 113359
+    },
+    {
+      "Reader": "ESDB",
+      "File": "esdb-gb-var8-size70-2026.02.25.txt",
+      "Sha256": "a86d63b5cb25b7eb7614543d923a95739fe2042f125e2cee56b12ec8f7c9ca10",
+      "EntriesRead": 173365
+    },
+    {
+      "Reader": "ESDB",
+      "File": "esdb-gb-var8-size80-2026.02.25.txt",
+      "Sha256": "cd17dd0ca76ebbff247a0589812eeee4901f7618058c7ecfefebd435f95b6a78",
+      "EntriesRead": 250543
+    },
+    {
+      "Reader": "Nediger",
+      "File": "nediger-2026-08-13.txt",
+      "Sha256": "50a4c39eccb01e093812b074dc2ee391e6254570d9567a7803ed7169b5e57a36",
+      "EntriesRead": 350291
+    }
+  ],
+  "EntryCount": 500451,
+  "SingleWordCount": 286839,
+  "PhraseCount": 213612,
+  "ProperNounCount": 121152,
+  "RacyCount": 1257,
+  "DiscardedCount": 5
+}

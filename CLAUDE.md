@@ -8,19 +8,26 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phase 0 (skeleton)
-is complete; phase 1 onwards is not started** — `Words.Core` is currently empty and the
-CLI is a stub. Check the plan before assuming a type exists.
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0 and 1 are
+complete.** `Words.Core` has the entry model, search-key normalisation and the artefact
+format; the merged lexicon (500,451 entries) is built and committed at `data/lexicon.gz`.
+**Phase 2 onwards is not started** — there are no indexes and no queries yet, and the CLI
+exposes only `lexicon build`. Check the plan before assuming a type exists.
 
 ## Commands
 
 ```bash
 dotnet build
 dotnet test
-dotnet test --filter "FullyQualifiedName~PatternMatcherTests"   # one class
-dotnet test --filter "DisplayName~matches phrase entries"       # one test
+dotnet test tests/Words.Core.Tests                              # one project
+dotnet test --filter "FullyQualifiedName~SearchKeysTests"       # one class
+dotnet test --filter "DisplayName~folds diacritics"             # one test
 
-dotnet run --project src/Words.Cli -- pattern "A??D??R?E?T"     # note the quotes
+# Rebuild the lexicon after changing anything in data/sources/. The artefact and its
+# manifest are committed, so review the diff before committing a rebuild.
+dotnet run --project src/Words.Cli -- lexicon build data/sources -o data/lexicon.gz
+
+dotnet run --project src/Words.Cli -- pattern "A??D??R?E?T"     # phase 6; note the quotes
 dotnet run -c Release --project tests/Words.Core.Benchmarks     # phase 7 onwards
 ```
 
@@ -68,10 +75,14 @@ Linux. Always quote patterns in examples and docs.
 which is a different judgement from how often a word is written. The field is `Score` for
 that reason; don't reintroduce `Frequency`.
 
-**Lexicon licensing is unresolved.** The app is in-house only. Nediger's terms are
-unverified and must be cleared before any distribution, particularly an App Store
-submission ([ADR 0004](docs/adr/0004-scowl-nediger-lexicon.md)). Don't add distribution
-tooling that implies the question is settled.
+**The lexicon carries an attribution obligation.** Both sources are permissively licensed
+(Nediger MIT; ESDB permits derived word lists), but both notices must ship with anything
+distributed. `words licence` and the MAUI/web About screens are release requirements, not
+niceties ([ADR 0004](docs/adr/0004-scowl-nediger-lexicon.md)).
+
+**`data/lexicon.gz` is generated but committed.** Don't hand-edit it, and don't regenerate
+it casually — a rebuild from unchanged inputs is byte-identical by design, so any diff
+means an input actually changed. The manifest records each source's SHA-256.
 
 ## Conventions
 
