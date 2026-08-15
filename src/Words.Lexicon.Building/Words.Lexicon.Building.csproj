@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../Words.Core/Words.Core.csproj" />
+  </ItemGroup>
+
+</Project>

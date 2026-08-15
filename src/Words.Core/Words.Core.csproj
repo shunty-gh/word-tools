@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The engine. No console, file system or UI dependencies: the CLI, MAUI and Blazor
+    front ends all consume this project unchanged. Keep it that way.
+  -->
+
+</Project>

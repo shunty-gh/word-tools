@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    InvariantGlobalization is deliberately NOT enabled. Diacritic folding into the search
+    key relies on Unicode normalisation, which needs ICU; turning it on would trade a
+    small startup saving for a core correctness requirement.
+  -->
+
+</Project>

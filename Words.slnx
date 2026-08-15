@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Words.Cli/Words.Cli.csproj" />
+    <Project Path="src/Words.Core/Words.Core.csproj" />
+    <Project Path="src/Words.Lexicon.Building/Words.Lexicon.Building.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Words.Core.Benchmarks/Words.Core.Benchmarks.csproj" />
+    <Project Path="tests/Words.Core.Tests/Words.Core.Tests.csproj" />
+  </Folder>
+</Solution>
