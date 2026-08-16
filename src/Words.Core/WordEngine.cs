@@ -69,25 +69,33 @@ public sealed class WordEngine(Lexicon lexicon) : IWordEngine
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        query.Compose?.Validate();
+
         // Parsed here rather than inside the iterator, for the same reason patterns are
         // compiled early: bad input should be reported at the call.
-        var letters = AnagramLetters.Parse(query.Letters);
+        var letters = AnagramLetters.Parse(
+            query.Letters,
+            query.Compose is null ? AnagramLetters.MaxBlanks : CompositionOptions.MaxBlanks);
 
-        return EnumerateAnagramMatches(letters, query.Filter, cancellationToken);
+        return EnumerateAnagramMatches(letters, query, cancellationToken);
     }
 
     private async IAsyncEnumerable<Match> EnumerateAnagramMatches(
         AnagramLetters letters,
-        EntryFilter filter,
+        AnagramQuery query,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // No scanning at all: every candidate answer is an index lookup on the sorted
-        // letters, one per combination of blanks.
-        var lookups = 0;
+        var composer = query.Compose is null
+            ? null
+            : new AnagramComposer(_lexicon, query.Filter, query.Compose);
+
+        // Single-entry answers need no scanning at all: each is an index lookup on the
+        // sorted letters, one per combination of blanks.
+        var produced = 0;
 
         foreach (var canonicalForm in letters.CanonicalForms())
         {
-            if (++lookups % LookupYieldInterval == 0)
+            if (++produced % LookupYieldInterval == 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await Task.Yield();
@@ -95,10 +103,26 @@ public sealed class WordEngine(Lexicon lexicon) : IWordEngine
 
             foreach (var entry in _lexicon.WithCanonicalForm(canonicalForm))
             {
-                if (filter.Allows(entry))
+                if (query.Filter.Allows(entry))
                 {
                     yield return Match.Of(entry);
                 }
+            }
+
+            if (composer is null)
+            {
+                continue;
+            }
+
+            foreach (var match in composer.Compose(canonicalForm, cancellationToken))
+            {
+                if (++produced % LookupYieldInterval == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await Task.Yield();
+                }
+
+                yield return match;
             }
         }
     }

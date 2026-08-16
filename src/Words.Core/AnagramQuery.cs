@@ -18,4 +18,10 @@ public sealed record AnagramQuery
 
     /// <summary>Which entries are eligible. Excludes racy entries by default.</summary>
     public EntryFilter Filter { get; init; } = EntryFilter.Default;
+
+    /// <summary>
+    /// Set to also return answers assembled from several entries. Null — the default —
+    /// returns only answers that are a single entry.
+    /// </summary>
+    public CompositionOptions? Compose { get; init; }
 }

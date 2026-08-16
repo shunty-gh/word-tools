@@ -91,7 +91,7 @@ internal static class PatternCommand
             Console.Error.WriteLine(
                 "       Quote it, or use '.' instead of '?' — '.' is not a wildcard, so it needs no quotes:");
             Console.Error.WriteLine("         words pattern \"C?T\"    or    words pattern C.T");
-            return 2;
+            return ExitCodes.BadRequest;
         }
 
         var lexicon = await Composition.LoadLexiconAsync(cancellationToken).ConfigureAwait(false);
@@ -106,14 +106,21 @@ internal static class PatternCommand
         catch (QuerySyntaxException error)
         {
             Console.Error.WriteLine($"words: {error.ToDiagnostic()}");
-            return 2;
+            return ExitCodes.BadRequest;
         }
 
         var found = new List<string>();
 
-        await foreach (var match in matches.ConfigureAwait(false))
+        try
         {
-            found.Add(match.DisplayForm);
+            await foreach (var match in matches.ConfigureAwait(false))
+            {
+                found.Add(match.DisplayForm);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return ExitCodes.Interrupted;
         }
 
         // Alphabetical is the default ordering; `--sort` arrives in phase 6.
@@ -124,6 +131,6 @@ internal static class PatternCommand
             Console.WriteLine(displayForm);
         }
 
-        return found.Count > 0 ? 0 : 1;
+        return found.Count > 0 ? ExitCodes.Found : ExitCodes.NothingFound;
     }
 }

@@ -47,7 +47,11 @@ public sealed class AnagramLetters
     /// The input holds a character that is neither a letter, a blank nor ignorable
     /// punctuation; or it has more than <see cref="MaxBlanks"/> blanks; or it is empty.
     /// </exception>
-    public static AnagramLetters Parse(string input)
+    /// <param name="maxBlanks">
+    /// How many blanks to allow. Lower than <see cref="MaxBlanks"/> when composing, where
+    /// each blank multiplies an already broad search.
+    /// </param>
+    public static AnagramLetters Parse(string input, int maxBlanks = MaxBlanks)
     {
         ArgumentNullException.ThrowIfNull(input);
 
@@ -61,12 +65,14 @@ public sealed class AnagramLetters
             switch (c)
             {
                 case '?' or '.':
-                    if (++blanks > MaxBlanks)
+                    if (++blanks > maxBlanks)
                     {
                         throw new QuerySyntaxException(
                             input,
                             i + 1,
-                            $"At most {MaxBlanks} unknown letters are allowed, and this is number {blanks}.");
+                            maxBlanks == 1
+                                ? $"Only one unknown letter is allowed here, and this is number {blanks}."
+                                : $"At most {maxBlanks} unknown letters are allowed, and this is number {blanks}.");
                     }
 
                     break;

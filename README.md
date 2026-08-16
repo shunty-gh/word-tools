@@ -6,9 +6,9 @@ One engine answers letter-shaped questions about a fixed body of English words. 
 command line is the first front end; MAUI (macOS, Windows, Android, iOS) and a web app are
 planned against the same engine.
 
-> **Status: early, but both solvers work.** `words pattern` and `words anagram` are usable
-> now, in minimal form — no `--json`, `--limit` or `--sort` yet, and no `--compose` for
-> multi-word anagrams. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and next.
+> **Status: early, but the solver works.** `words pattern` and `words anagram` are usable
+> now, including multi-word answers. Still to come: `--json`, `--limit`, `--sort` and
+> personal word lists. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and next.
 
 ## What it does
 
@@ -67,7 +67,17 @@ answer's length is the letters you gave plus the blanks — up to three. Case, a
 spaces, hyphens and apostrophes in your input are all forgiven, so a phrase can be pasted
 straight in.
 
-Multi-word answers built from several separate words (`--compose`) are not implemented yet.
+**Multi-word answers** with `--compose`:
+
+```console
+$ words anagram notaproblem --compose
+amble pronto
+aplomb tenor
+...
+```
+
+Composed answers are built from ordinary single words, never phrases or proper nouns, and
+use two words by default (`--components 3` for three). Only the most likely 200 are shown.
 
 The same `?` therefore means two different things — a *cell* in a pattern, a *blank* in an
 anagram. That is what solvers already type, so the character is shared even though the

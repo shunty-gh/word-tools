@@ -198,19 +198,49 @@ words: At most 3 unknown letters are allowed, and this is number 4.
         ^
 ```
 
-### 5 — Composition
+### 5 — Composition ✅
 
-Recursive enumeration over the remaining letter multiset, memoised on that multiset.
-Components drawn only from single-word, non-proper-noun entries. Defaults: two components,
-minimum component length 3, at most one blank. Three components and a minimum length of 2
-are configurable; one-letter components never allowed.
+`AnagramComposer` enumerates recursively over the remaining letter multiset. Each partition
+is produced once, not once per ordering, by requiring that every component taken contains
+the lowest letter still unused — without that rule `cat dog` and `dog cat` are both found,
+and the duplication compounds with each component.
 
-Ranked by fewest components, then by the score of the weakest component, to decide which
-survive the cap — then displayed alphabetically, so the cap selects meaningfully rather
-than returning everything beginning with A.
+Components come only from single-word, non-proper-noun entries, so answers are not built
+out of phrases. Defaults: two components, minimum length 3, at most one blank. Three
+components and a minimum length of 2 are configurable; one-letter components never allowed.
 
-*Done when:* a known split resolves, and a deliberately broad query cancels promptly
-mid-enumeration.
+**Memoisation turned out to be unnecessary.** The plan called for memoising on the remaining
+multiset; measurement says the search is not where the time goes. A cache of eligible
+entries per canonical form was worth having; nothing else was. Timings, all including
+process start and the ~270 ms lexicon load:
+
+| Query | Time |
+| --- | ---: |
+| `catdog --compose` | 0.32 s |
+| `notaproblem --compose` | 0.29 s |
+| `notaproblem --compose --components 3` | 0.30 s |
+| `encyclopaedias --compose --components 3` (14 letters) | 0.41 s |
+| `"encyclopaedias." --compose --components 3` (+1 blank) | 2.06 s |
+
+Only the last is slow, and only because a blank multiplies the whole search by 26 — which
+is exactly why composition allows one blank rather than three.
+
+**Ctrl-C did not work and had to be wired up.** System.CommandLine only connects termination
+signals to the cancellation token when `InvocationConfiguration.ProcessTerminationTimeout`
+is set, and we were passing a configuration only on the help path. A broad composition
+ignored the interrupt and ran to completion. Now an interrupt at 0.4 s exits at 0.42 s.
+
+Interrupted queries exit **130**, not 1 — a search abandoned part-way has not established
+that nothing matches, and a script must be able to tell those apart. Exit codes are now
+named in `ExitCodes` rather than scattered as literals.
+
+The CLI ranks by fewest components, then by the weakest component's score, keeps the best
+200, and then sorts alphabetically for display, with a note to stderr saying how many were
+suppressed.
+
+*Done.* 195 tests green. `catdog --compose` returns `cat dog`, `act god` and eighteen more;
+`notaproblem --compose` finds `amble pronto` and `aplomb tenor`;
+`"encyclopaedias." --compose` finds `abs encyclopedia`.
 
 ### 6 — CLI
 

@@ -8,13 +8,13 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–4 are
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–5 are
 complete.** `Words.Core` has the entry model, normalisation, the artefact format, the
-`Lexicon` with both indexes, the source abstractions, and both query kinds via
+`Lexicon` with both indexes, the source abstractions, both query kinds and composition via
 `WordEngine`; the merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
-embedded into `Words.Core`. **Phase 5 onwards is not started** — there is no composition
-(`--compose`), and `words pattern` / `words anagram` are minimal versions with none of
-phase 6's options. Check the plan before assuming a type exists.
+embedded into `Words.Core`. **Phase 6 onwards is not started** — there is no `--json`,
+`--limit`, `--sort`, `--source`, `--include-racy`, `words add` or `words licence`. Check
+the plan before assuming a type exists.
 
 ## Commands
 
@@ -100,9 +100,19 @@ them outside, so `<"pattern">` reads as `"<pattern>"` — literal quotes around 
 rather than quotes that look like part of the name. Only help and parse-error output is
 buffered for this; query results stream untouched.
 
-**Exit codes are grep's: 0 found, 1 nothing found, 2 bad request.** `Program.cs` overrides
-System.CommandLine's parse-failure code, which is 1 by default — that would tell a script
-"no matches" when the command was actually malformed.
+**Exit codes are grep's, named in `ExitCodes`: 0 found, 1 nothing found, 2 bad request,
+130 interrupted.** `Program.cs` overrides System.CommandLine's parse-failure code, which is
+1 by default — that would tell a script "no matches" when the command was actually
+malformed. An interrupted query is 130 for the same reason.
+
+**`InvocationConfiguration.ProcessTerminationTimeout` is what makes Ctrl-C work.** Without
+it System.CommandLine never connects the signal to the cancellation token, and a long
+composition runs to completion after the user has given up. It is set in `Program.cs` and
+must be passed on every `InvokeAsync` path, not just the help one.
+
+**Composition produces each partition once** because every component taken must contain the
+lowest letter still unused (`AnagramComposer`). Removing that rule silently doubles or
+triples the results with reorderings of answers already found.
 
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer

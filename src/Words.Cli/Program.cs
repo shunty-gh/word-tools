@@ -10,6 +10,14 @@ root.Subcommands.Add(LexiconCommand.Create());
 
 var parseResult = root.Parse(args);
 
+// Setting this is what connects Ctrl-C to the CancellationToken the commands are given.
+// Without it a broad composition ignores the interrupt and runs to completion, which on a
+// long rack is several seconds after the user has given up.
+var configuration = new InvocationConfiguration
+{
+    ProcessTerminationTimeout = TimeSpan.FromSeconds(2),
+};
+
 // Help and parse-error output are the only things carrying a usage line, and both are
 // small and produced once — so they can be buffered and tidied. Query results are not
 // buffered; they stream straight to the console.
@@ -22,9 +30,10 @@ if (carriesUsageLine)
     var output = new StringWriter();
     var error = new StringWriter();
 
-    exitCode = await parseResult
-        .InvokeAsync(new InvocationConfiguration { Output = output, Error = error })
-        .ConfigureAwait(false);
+    configuration.Output = output;
+    configuration.Error = error;
+
+    exitCode = await parseResult.InvokeAsync(configuration).ConfigureAwait(false);
 
     Console.Error.Write(HelpText.WithQuotesOutsidePlaceholders(error.ToString()));
     Console.Out.Write(HelpText.WithQuotesOutsidePlaceholders(output.ToString()));
@@ -38,7 +47,7 @@ if (carriesUsageLine)
 }
 else
 {
-    exitCode = await parseResult.InvokeAsync().ConfigureAwait(false);
+    exitCode = await parseResult.InvokeAsync(configuration).ConfigureAwait(false);
 }
 
 // Exit codes follow grep: 0 found, 1 nothing found, 2 something wrong with the request.
