@@ -7,6 +7,24 @@ using Words.Maui.Services;
 
 namespace Words.Maui.ViewModels;
 
+/// <summary>
+/// One square in the strip beneath the input: a letter you have, or a gap you do not.
+/// </summary>
+/// <param name="Letter">The letter, or empty for a gap.</param>
+/// <param name="IsChoice">A <c>[abc]</c> class — one cell, several possible letters.</param>
+public sealed record LetterCell(string Letter, bool IsChoice)
+{
+    public static LetterCell Gap { get; } = new(string.Empty, IsChoice: false);
+
+    public bool IsKnown => Letter.Length > 0;
+}
+
+/// <summary>
+/// One answer, with a short tag when there is something about it worth knowing at a glance
+/// while filling a grid.
+/// </summary>
+public sealed record AnswerRow(string Answer, string Tag);
+
 public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWordStore personalWords)
     : ObservableObject
 {
@@ -66,7 +84,15 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
     [ObservableProperty]
     public partial int MinLengthIndex { get; set; } = 1;
 
-    public ObservableCollection<string> Answers { get; } = [];
+    public ObservableCollection<AnswerRow> Answers { get; } = [];
+
+    /// <summary>
+    /// The query drawn as crossword cells. Presentational only and deliberately forgiving —
+    /// it never throws, and a malformed pattern is reported by the status line, not here.
+    /// </summary>
+    public ObservableCollection<LetterCell> Cells { get; } = [];
+
+    public bool HasCells => Cells.Count > 0;
 
     public string Placeholder => IsAnagram
         ? "Your letters, with . for each one you don't know"
@@ -83,7 +109,65 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
         OnPropertyChanged(nameof(Placeholder));
         OnPropertyChanged(nameof(CrosswordOpacity));
         OnPropertyChanged(nameof(AnagramOpacity));
+        OnPropertyChanged(nameof(EmptyMessage));
     }
+
+    partial void OnQueryChanged(string value)
+    {
+        Cells.Clear();
+
+        foreach (var cell in ReadCells(value))
+        {
+            Cells.Add(cell);
+        }
+
+        OnPropertyChanged(nameof(HasCells));
+    }
+
+    /// <summary>
+    /// Reads the query as squares: a letter fills one, '.' or '?' leaves one empty, an
+    /// ellipsis stands for the three dots it replaced, and '[abc]' is a single cell with
+    /// several possible letters. Spaces and punctuation are ignored, as the parsers do.
+    /// </summary>
+    private static IEnumerable<LetterCell> ReadCells(string input)
+    {
+        for (var i = 0; i < input.Length; i++)
+        {
+            var c = input[i];
+
+            switch (c)
+            {
+                case '?' or '.':
+                    yield return LetterCell.Gap;
+                    break;
+
+                case '\u2026':
+                    yield return LetterCell.Gap;
+                    yield return LetterCell.Gap;
+                    yield return LetterCell.Gap;
+                    break;
+
+                case '[':
+                    while (i < input.Length && input[i] != ']')
+                    {
+                        i++;
+                    }
+
+                    yield return new LetterCell("\u00b7", IsChoice: true);
+                    break;
+
+                default:
+                    if (char.IsLetter(c))
+                    {
+                        yield return new LetterCell(char.ToUpperInvariant(c).ToString(), IsChoice: false);
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    public string EmptyMessage => "Answers appear here.";
 
     partial void OnShowOptionsChanged(bool value) => OnPropertyChanged(nameof(OptionsLabel));
 
@@ -178,7 +262,27 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
         }
     }
 
-    private sealed record Found(IReadOnlyList<string> Shown, int Total);
+    private sealed record Found(IReadOnlyList<AnswerRow> Shown, int Total);
+
+    /// <summary>
+    /// A short tag, when there is something worth knowing at a glance while filling a grid.
+    /// Your own words come first: that an answer is one you added matters more than what
+    /// kind of word it is.
+    /// </summary>
+    private static string TagFor(Match match)
+    {
+        if (match.Components.Any(c => c.Sources.HasFlag(Core.Sources.Personal)))
+        {
+            return "yours";
+        }
+
+        if (match.Components.Any(c => c.Kinds.HasFlag(EntryKinds.ProperNoun)))
+        {
+            return "name";
+        }
+
+        return match.Components.Any(c => c.Kinds.HasFlag(EntryKinds.Phrase)) ? "phrase" : string.Empty;
+    }
 
     private EntryFilter BuildFilter() => new()
     {
@@ -227,7 +331,7 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
         var shown = MatchOrdering.Arrange(all, sort, DisplayLimit);
 
-        return new Found([.. shown.Select(m => m.DisplayForm)], all.Count);
+        return new Found([.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m)))], all.Count);
     }
 
     private static string Describe(Found found, long elapsedMs)

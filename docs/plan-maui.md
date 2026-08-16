@@ -3,6 +3,10 @@
 The desktop and mobile front end, over the same `Words.Core` the CLI uses. See
 [plan-cli.md](./plan-cli.md) for the engine, and [CONTEXT.md](../CONTEXT.md) for vocabulary.
 
+**[UI.md](../UI.md) governs the interface.** Usability first: platform conventions, standard
+controls, obvious affordances, colour that carries no meaning on its own. Read it before
+designing a screen.
+
 ## Decisions
 
 **Mac Catalyst and iOS.** Every platform listed in `TargetFrameworks` needs its SDK present
@@ -47,6 +51,52 @@ Two new dependencies, both standard for MAUI and source-generated rather than re
 `CommunityToolkit.Mvvm` for `[ObservableProperty]`/`[RelayCommand]`, and the MAUI packages
 themselves. The MAUI project opts out of central package management, because its versions
 come from `$(MauiVersion)`, which `Directory.Packages.props` cannot resolve.
+
+## Visual design
+
+Governed by [UI.md](../UI.md), which outranks any general advice about being distinctive.
+
+**Ink on newsprint.** A crossword is a printed thing filled in by hand, and the single accent
+is the blue of the pen you fill it in with. The palette is otherwise monochrome, so nothing
+depends on hue: the primary action is the only *filled* button, and answer tags are words
+rather than colours. The interface reads in black and white, as UI.md requires.
+
+**The cell strip is the one bold idea.** The query is drawn beneath the input as squares of
+the grid — letters you have filled, gaps you do not empty. It earns its place by doing a job:
+it shows how long the answer will be, which otherwise has to be counted by eye. It is
+read-only and flat, because static things must not look clickable. Everything around it is
+deliberately quiet, and there is no animation anywhere.
+
+**Answer tags.** A row carries a short word — `yours`, `name`, `phrase` — when there is
+something worth knowing at a glance while filling a grid. Untagged answers are ordinary
+single words, which is most of them.
+
+UI.md changed three things that were already built: Search is now the only filled button
+where all four had been identical; every button is at least 44 points tall; and the empty
+message was cut back, because the placeholder already teaches the syntax and each element
+should do one job.
+
+Colours live in `Resources/Styles/Colors.xaml` under role names; the styling is in
+`Design.xaml`, merged after the template's `Styles.xaml` so it wins.
+
+**The icon is Pattern Lens** — a search lens holding a three-by-three grid with one cell
+filled in the accent blue, its handle resolving into a fountain-pen nib. Grid, search, and
+the pen you fill it in with, which is the same idea the palette rests on. Concept boards and
+the reasoning are in [docs/icon-concepts](./icon-concepts/README.md); the production sources
+are clean SVG in `Resources/AppIcon` and `Resources/Splash`, using only the primitives MAUI's
+resizetizer supports. Checked on a phone home screen: nothing is clipped by the icon mask,
+and it reads at that size against Apple's own icons.
+
+**The app's identity was still the template's** and is now settled: `ApplicationTitle` was
+`Words.Maui`, which is what the home screen displayed, and `ApplicationId` was
+`com.companyname.words.maui`. They are now `Words` and `uk.co.shunty.words`. Worth doing
+before distribution rather than after — the identifier is how the OS and any store know the
+app, and it also determines where per-app data lives, so changing it later orphans a saved
+personal word list.
+
+**No display typeface is bundled** — that is a repo asset with licensing implications, and
+this project has been careful about exactly that. Say if you want one and I will check terms
+first.
 
 ## Memory
 
@@ -117,7 +167,6 @@ rather than discarding it.
 
 Next, roughly in order:
 
-1. Visual design. It is functional and plain.
-2. Measure on an iOS device, then decide on the flattened store.
-3. Add platforms one at a time, each with its CI runner.
-4. Possibly: merge a personal word into the loaded lexicon instead of reloading.
+1. Measure on an iOS device, then decide on the flattened store.
+2. Add platforms one at a time, each with its CI runner.
+3. Possibly: merge a personal word into the loaded lexicon instead of reloading.

@@ -209,6 +209,18 @@ cost hundreds of milliseconds on every CLI invocation.
 latter creates a `Words.Lexicon` namespace that shadows the `Lexicon` *type* from anywhere
 inside `Words.*`, which breaks every CLI file that needs both. Don't "tidy" the name back.
 
+## Designing any user interface
+
+**Read [UI.md](UI.md) before designing a screen, not after.** It governs anything with a user
+interface, the CLI's output included where it applies. In short: match what the user already
+expects, prefer platform conventions and standard controls, make interactive things look
+interactive and static things not, keep colour non-load-bearing so the UI still reads in
+black and white, and cut the number of decisions a user has to make.
+
+Where it conflicts with general advice about being distinctive or taking a design risk,
+**UI.md wins** — it is this project's rule and the general advice is not. A visual idea has
+to earn its place by making behaviour easier to guess; if it needs explaining, it is wrong.
+
 ## Conventions
 
 [CONTEXT.md](CONTEXT.md) is the glossary and is authoritative for naming — `Entry` not

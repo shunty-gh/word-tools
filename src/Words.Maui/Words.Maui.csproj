@@ -40,10 +40,14 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
 		<!-- Display name -->
-		<ApplicationTitle>Words.Maui</ApplicationTitle>
+		<ApplicationTitle>Words</ApplicationTitle>
 
-		<!-- App Identifier -->
-		<ApplicationId>com.companyname.words.maui</ApplicationId>
+		<!-- App Identifier. Reverse-DNS on the author's own domain, replacing the template's
+		     "com.companyname" placeholder. Changing this later is disruptive — it is the
+		     app's identity to the OS and to any store — so it is settled now, before
+		     anything is distributed. It also determines where per-app data lives, so
+		     changing it orphans any personal word list saved under the old identifier. -->
+		<ApplicationId>uk.co.shunty.words</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -61,14 +65,13 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2A4B8D" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#F2F3F5" BaseSize="128,128" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />

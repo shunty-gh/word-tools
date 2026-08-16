@@ -14,7 +14,7 @@
 
             <Label
                 Text="The word lists bundled with this app are used under the following terms."
-                FontSize="16"
+                Style="{StaticResource Muted}"
                 Margin="0,16,0,0" />
 
             <!--
@@ -26,8 +26,8 @@
                     <DataTemplate x:DataType="core:LexiconLicence">
                         <VerticalStackLayout Spacing="8">
                             <Label Text="{Binding Source}" FontAttributes="Bold" FontSize="19" />
-                            <Label Text="{Binding Summary}" FontSize="16" />
-                            <Label Text="{Binding Text}" FontSize="13" FontFamily="Monospace" Opacity="0.75" />
+                            <Label Text="{Binding Summary}" />
+                            <Label Text="{Binding Text}" Style="{StaticResource Muted}" FontSize="13" FontFamily="Monospace" />
                         </VerticalStackLayout>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
