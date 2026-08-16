@@ -4,14 +4,6 @@ namespace Words.Core.Tests;
 
 public class LexiconTests
 {
-    private sealed class FakeSource(string name, params Entry[] entries) : ILexiconSource
-    {
-        public string Name { get; } = name;
-
-        public ValueTask<IReadOnlyList<Entry>> LoadAsync(CancellationToken cancellationToken = default) =>
-            new((IReadOnlyList<Entry>)entries);
-    }
-
     private static ValueTask<Lexicon> LoadAsync(params ILexiconSource[] sources) =>
         Lexicon.LoadAsync(sources);
 

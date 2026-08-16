@@ -142,14 +142,33 @@ Measured on the committed lexicon: **load 118 ms**, plus **7 ms** for the length
 ~267 ms, both inside budget. Process wall clock adds JIT warm-up on top, which is what
 NativeAOT in phase 8 is for.
 
-### 3 — Pattern queries
+### 3 — Pattern queries ✅
 
-Parse the restricted language (literals, `?`, `[abc]`, `[^def]`) into a compiled matcher.
-Reject anything else, naming the offending character and its position. Select the length
-bucket the pattern's length implies, then scan it. Phrase entries included by default.
+`PatternMatcher` compiles the restricted language (literals, `?`, `[abc]`, `[^def]`) and
+rejects anything else, naming the offending character and pointing at it. Every element
+compiles to a 26-bit letter mask — a literal sets one bit, `?` sets all of them, a class
+sets its own — so matching is one bit test per position with no branching on element type.
 
-*Done when:* `A??D??R?E?T` returns only 11-letter matches, and invalid patterns produce
-positional errors.
+`WordEngine.QueryAsync` selects the single length bucket the pattern implies and scans it,
+streaming `Match` values and yielding every 8,192 candidates so a WebAssembly host stays
+responsive. Patterns are compiled *before* the iterator is returned, so a typo surfaces at
+the call rather than at some later `await foreach`.
+
+`EntryFilter` — kinds, sources, racy — is shared with the anagram queries to come, so
+"exclude racy entries" means the same thing whichever question is asked.
+
+A minimal `words pattern` was brought forward from phase 6 (bare lines, grep exit codes,
+unquoted-glob detection) because the phase could not otherwise be verified against the real
+lexicon. `--json`, `--limit`, `--sort`, `--source` and `--include-racy` remain phase 6.
+
+*Done.* 126 tests green. Against the committed lexicon, `A?????R?E?T` returns
+`autocorrect` and every result is exactly 11 letters; `RED?ERRING` returns `red herring`,
+matching straight through the space; `AB*D` reports `'*' is not allowed` with a caret under
+position 3. A query costs 140–160 ms end to end, process start included.
+
+Worth recording: the plan's own example `A??D??R?E?T` has **no** matches in this lexicon —
+the `D` in the fourth position rules everything out. It was always an illustration rather
+than a real answer, and a future reader should not take an empty result for a defect.
 
 ### 4 — Anagram queries
 
@@ -253,7 +272,7 @@ building it.
 | Loading | Ordered collection of sources; personal words are a source |
 | Storage | Compressed artefact + in-memory indexes. No SQLite for the lexicon |
 | Personal words | Plain text, merged at load, added via `words add` |
-| Pattern language | Literals, `?`, `[abc]`, `[^def]`. No `*`, no regex |
+| Pattern language | Literals, `?` or `.`, `[abc]`, `[^def]`. No `*`, no regex |
 | Pattern length | Fixes answer length exactly |
 | Phrases | Included by default in every query |
 | Anagrams | Exact: answer length = letters + blanks. Up to 3 blanks |

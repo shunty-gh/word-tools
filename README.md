@@ -6,27 +6,43 @@ One engine answers letter-shaped questions about a fixed body of English words. 
 command line is the first front end; MAUI (macOS, Windows, Android, iOS) and a web app are
 planned against the same engine.
 
-> **Status: early.** The lexicon is built and the engine's model and indexes are in place.
-> **The solver commands do not exist yet** — `words pattern` and `words anagram` arrive in
-> phase 6. Today the CLI can only build and inspect the lexicon. See
-> [docs/plan-cli.md](docs/plan-cli.md) for what is done and what is next.
+> **Status: early, but the crossword solver works.** `words pattern` is usable now, in a
+> minimal form — no `--json`, `--limit` or `--sort` yet. **`words anagram` does not exist**;
+> it arrives in phase 4. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and what
+> is next.
 
-## What it will do
+## What it does
 
 **Crossword solver.** Give it the letters you have and the gaps you don't:
 
+```console
+$ words pattern A.....R.E.T
+autocorrect
+
+$ words pattern RED.ERRING
+red herring
 ```
-words pattern "A??D??R?E?T"
+
+A pattern's length fixes the answer's length exactly. **`.` and `?` both mean exactly one
+letter** — note that this is **not** a regular expression, where `?` would mean "zero or
+one". Character classes work too: `[aeiou]` for a vowel, `[^s]` for anything but an `s`.
+
+Prefer `.`: it is not a shell wildcard, so it needs no quotes. `?` and `[abc]` are, so
+quote those — in zsh an unquoted `A??D` aborts before the program even starts.
+
+```console
+$ words pattern "C[aeiou]T"
+cat
+cit
+cot
+cut
 ```
 
-A pattern's length fixes the answer's length exactly. `?` means *exactly one letter* —
-note that this is **not** a regular expression, where `?` means "zero or one". Character
-classes are supported: `[aeiou]` for a vowel, `[^s]` for anything but an `s`.
+Grids have no spaces, so a phrase answer matches straight through it — which is why
+`RED.ERRING` finds `red herring`.
 
-Because grids have no spaces, phrase answers match on their letters alone — an 11-cell
-answer can be `RED HERRING`.
-
-**Anagram solver.** Give it your letters, using `?` for one you don't know yet:
+**Anagram solver** *(phase 4, not yet built)*. Give it your letters, using `?` for one you
+don't know yet:
 
 ```
 words anagram "trisec?"
@@ -40,8 +56,9 @@ The same `?` therefore means two different things — a *cell* in a pattern, a *
 anagram. That is what solvers already type, so the character is shared even though the
 concepts are not. [CONTEXT.md](CONTEXT.md) is the glossary.
 
-> **Quote your patterns.** `?` and `[abc]` are shell glob characters. In zsh an unquoted
-> pattern fails before the program even starts; in bash it silently works. Always quote.
+> **Quoting.** `?` and `[abc]` are shell glob characters: in zsh an unquoted pattern fails
+> before the program even starts, while in bash it silently works, so the same command
+> behaves differently on different machines. Quote those, or use `.` and skip the quotes.
 
 ## Getting started
 

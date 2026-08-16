@@ -17,4 +17,6 @@ public enum Sources
 
     /// <summary>Words the user added themselves.</summary>
     Personal = 4,
+
+    All = Esdb | Nediger | Personal,
 }

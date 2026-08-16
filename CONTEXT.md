@@ -54,9 +54,10 @@ _Avoid_: Regex, expression, mask (the language is deliberately not a regular
 expression; see the note on `?` below)
 
 **Cell**:
-One position in a pattern, written `?` when its letter is unknown. Matches exactly one
-letter — never zero, never more than one.
-_Avoid_: Wildcard, any-char, dot
+One position in a pattern, written `?` or `.` when its letter is unknown. Matches exactly
+one letter — never zero, never more than one. The two spellings are identical in meaning;
+`.` exists because it is not a shell wildcard and so needs no quoting.
+_Avoid_: Wildcard, any-char
 
 **Blank**:
 An unknown letter in an anagram query, also written `?`, standing for one letter whose

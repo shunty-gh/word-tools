@@ -8,13 +8,13 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–2 are
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–3 are
 complete.** `Words.Core` has the entry model, normalisation, the artefact format, the
-`Lexicon` with both indexes, and the source abstractions; the merged lexicon (500,451
-entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`. **Phase 3
-onwards is not started** — there are no queries yet, `Match` and `IWordEngine` do not
-exist, and the CLI exposes only `lexicon build` and `lexicon info`. Check the plan before
-assuming a type exists.
+`Lexicon` with both indexes, the source abstractions, and pattern queries via
+`WordEngine`; the merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
+embedded into `Words.Core`. **Phase 4 onwards is not started** — there are no anagram
+queries, `AnagramQuery` does not exist, and `words pattern` is a minimal version with none
+of phase 6's options. Check the plan before assuming a type exists.
 
 ## Commands
 
@@ -33,7 +33,7 @@ dotnet run --project src/Words.Cli -- lexicon build data/sources -o data/lexicon
 # path — it reports load time and each index separately.
 dotnet run -c Release --project src/Words.Cli -- lexicon info
 
-dotnet run --project src/Words.Cli -- pattern "A??D??R?E?T"     # phase 6; note the quotes
+dotnet run --project src/Words.Cli -- pattern "A?????R?E?T"     # note the quotes
 dotnet run -c Release --project tests/Words.Core.Benchmarks     # phase 7 onwards
 ```
 
@@ -65,17 +65,43 @@ incidental — it is what lets a Blazor front end yield to the browser event loo
 ## Things that will catch you out
 
 **`?` is not the regex `?`.** In a pattern it means *exactly one letter* — regex `.`, not
-"zero or one". The pattern language is literals, `?`, and `[abc]` / `[^def]`, deliberately
-not a regular expression ([ADR 0003](docs/adr/0003-pattern-language-not-regex.md)). Never
-describe it as regex-like in help text or errors.
+"zero or one". The pattern language is literals, `?` or `.`, and `[abc]` / `[^def]`,
+deliberately not a regular expression
+([ADR 0003](docs/adr/0003-pattern-language-not-regex.md)). Never describe it as regex-like
+in help text or errors, even though `.` happens to agree with its regex meaning.
+
+**`.` and `?` are the same thing.** `.` exists solely because it is not a shell wildcard,
+so `words pattern A..D` works unquoted where `A??D` does not. Don't remove it as redundant.
 
 **`?` means something different in each query kind.** A *cell* in a pattern (unknown
 letter, known position); a *blank* in an anagram (unknown letter, no position). See
 [CONTEXT.md](CONTEXT.md).
 
 **`?` and `[abc]` are shell glob characters.** zsh aborts an unmatched glob before the app
-starts, while bash passes it through — so unquoted patterns fail on macOS and work on
-Linux. Always quote patterns in examples and docs.
+starts (`zsh: no matches found`), while bash passes it through — so unquoted patterns fail
+on macOS and work on Linux. Quote patterns containing `?` or `[abc]` in examples and docs;
+`.` needs no quotes. Note that patterns never contain spaces (a space is a syntax error),
+so quoting is only ever about globbing.
+
+`words pattern` has a **hidden `expanded` argument** with `ZeroOrMore` arity that exists
+solely to absorb the filenames a shell substitutes for an unquoted pattern, so the command
+can explain what happened instead of emitting "unrecognized argument". It also keeps the
+usage line honest about accepting exactly one pattern. Don't delete it as unused.
+
+**Help output is rewritten on its way out**, in `HelpText` and `Program.cs`. The argument
+is *named* `"pattern"` (quotes included) because that is the only way to get quotes into
+System.CommandLine's usage line, which always wraps a name in `<>`; the rewrite then moves
+them outside, so `<"pattern">` reads as `"<pattern>"` — literal quotes around a placeholder,
+rather than quotes that look like part of the name. Only help and parse-error output is
+buffered for this; query results stream untouched.
+
+**Exit codes are grep's: 0 found, 1 nothing found, 2 bad request.** `Program.cs` overrides
+System.CommandLine's parse-failure code, which is 1 by default — that would tell a script
+"no matches" when the command was actually malformed.
+
+**Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
+an iterator method — it validates, then returns a private one. Merging them would defer
+every syntax error to the first `await foreach`, far from the call that caused it.
 
 **Scores are not word frequency.** A crossword list rates how good an entry is as fill,
 which is a different judgement from how often a word is written. The field is `Score` for
