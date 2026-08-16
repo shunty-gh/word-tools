@@ -15,4 +15,15 @@
                       LogicalName="Words.Core.lexicon.gz" />
   </ItemGroup>
 
+  <!--
+    The word lists' licences require their notices to travel with anything distributed, so
+    they are embedded rather than left as files beside the binary.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../data/sources/esdb-COPYRIGHT.txt"
+                      LogicalName="Words.Core.licences.esdb.txt" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../data/sources/nediger-LICENSE.txt"
+                      LogicalName="Words.Core.licences.nediger.txt" />
+  </ItemGroup>
+
 </Project>

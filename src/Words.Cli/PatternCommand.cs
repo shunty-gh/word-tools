@@ -6,10 +6,6 @@ namespace Words.Cli;
 /// <summary>
 /// <c>words pattern</c> — answers that fit a shape of letters and gaps.
 /// </summary>
-/// <remarks>
-/// Minimal for phase 3: bare lines to stdout and grep's exit codes. Phase 6 adds
-/// <c>--json</c>, <c>--limit</c>, <c>--sort</c>, <c>--source</c> and <c>--include-racy</c>.
-/// </remarks>
 internal static class PatternCommand
 {
     /// <summary>
@@ -25,6 +21,7 @@ internal static class PatternCommand
           words pattern RED.ERRING    grids have no spaces, so this finds "red herring"
           words pattern "A??D"        '?' means the same as '.', but must be quoted
           words pattern "C[aeiou]T"   C, then a vowel, then T — quote it too
+          words pattern A..D --json   answers as JSON
 
         Patterns using '?' or '[abc]' must be quoted. Use '.' instead and you can
         normally do without. If in doubt, quote it — single or double.
@@ -54,17 +51,22 @@ internal static class PatternCommand
             Hidden = true,
         };
 
+        var options = new QueryOptions();
+
         var command = new Command("pattern", Summary)
         {
             pattern,
             expanded,
         };
 
+        options.AddTo(command);
         command.Aliases.Add("pat");
 
         command.SetAction((parseResult, cancellationToken) => RunAsync(
             parseResult.GetValue(pattern) ?? string.Empty,
             parseResult.GetValue(expanded) ?? [],
+            // A pattern fixes the answer's length, so results are naturally few: no cap.
+            options.Read(parseResult, defaultLimit: int.MaxValue),
             cancellationToken));
 
         return command;
@@ -73,6 +75,7 @@ internal static class PatternCommand
     private static async Task<int> RunAsync(
         string pattern,
         string[] expanded,
+        QuerySettings settings,
         CancellationToken cancellationToken)
     {
         if (expanded.Length > 0)
@@ -101,7 +104,9 @@ internal static class PatternCommand
 
         try
         {
-            matches = engine.QueryAsync(new PatternQuery { Pattern = pattern }, cancellationToken);
+            matches = engine.QueryAsync(
+                new PatternQuery { Pattern = pattern, Filter = settings.Filter },
+                cancellationToken);
         }
         catch (QuerySyntaxException error)
         {
@@ -109,28 +114,6 @@ internal static class PatternCommand
             return ExitCodes.BadRequest;
         }
 
-        var found = new List<string>();
-
-        try
-        {
-            await foreach (var match in matches.ConfigureAwait(false))
-            {
-                found.Add(match.DisplayForm);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return ExitCodes.Interrupted;
-        }
-
-        // Alphabetical is the default ordering; `--sort` arrives in phase 6.
-        found.Sort(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var displayForm in found)
-        {
-            Console.WriteLine(displayForm);
-        }
-
-        return found.Count > 0 ? ExitCodes.Found : ExitCodes.NothingFound;
+        return await QueryRunner.RunAsync(matches, settings, cancellationToken).ConfigureAwait(false);
     }
 }

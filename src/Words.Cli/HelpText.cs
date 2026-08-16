@@ -35,6 +35,7 @@ internal static partial class HelpText
     {
         "pattern" => PatternCommand.ExtendedHelp,
         "anagram" => AnagramCommand.ExtendedHelp,
+        "add" => AddCommand.ExtendedHelp,
         _ => null,
     };
 

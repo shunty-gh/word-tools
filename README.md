@@ -6,9 +6,9 @@ One engine answers letter-shaped questions about a fixed body of English words. 
 command line is the first front end; MAUI (macOS, Windows, Android, iOS) and a web app are
 planned against the same engine.
 
-> **Status: early, but the solver works.** `words pattern` and `words anagram` are usable
-> now, including multi-word answers. Still to come: `--json`, `--limit`, `--sort` and
-> personal word lists. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and next.
+> **Status: the command line is feature-complete.** Still to come: benchmarks, and
+> packaging so it installs as a `dotnet tool` or a standalone binary. See
+> [docs/plan-cli.md](docs/plan-cli.md).
 
 ## What it does
 
@@ -77,7 +77,29 @@ aplomb tenor
 ```
 
 Composed answers are built from ordinary single words, never phrases or proper nouns, and
-use two words by default (`--components 3` for three). Only the most likely 200 are shown.
+use two words by default (`--components 3` for three). Only the most likely 200 are shown,
+unless you pass `--limit`.
+
+## Options
+
+Both solvers accept `--json`, `--limit n` (`0` for all), `--sort alpha|score|length`,
+`--source esdb|nediger|personal` and `--include-racy`. Commands have short aliases: `pat`,
+`anag`, `lex`.
+
+Exit codes follow grep, so the solver scripts cleanly: **0** answers found, **1** none,
+**2** something wrong with the request, **130** interrupted.
+
+## Your own words
+
+```console
+$ words add "bletchley park"
+$ words add jabberwock --score 40
+```
+
+Personal entries are merged into the lexicon on every query, and `--source personal` limits
+results to them. The file is plain text you can edit by hand — one entry per line with an
+optional `;score` — at `~/Library/Application Support/words/personal.txt` on macOS,
+`~/.config/words/personal.txt` on Linux, `%APPDATA%\words\personal.txt` on Windows.
 
 The same `?` therefore means two different things — a *cell* in a pattern, a *blank* in an
 anagram. That is what solvers already type, so the character is shared even though the
@@ -129,7 +151,8 @@ really changed.
 ### Attribution
 
 Both word lists are permissively licensed, and both notices must travel with anything
-distributed:
+distributed. `words licence` prints them; the texts are embedded in the binary so it works
+wherever the program does.
 
 - **Nediger** — MIT, © 2026 bewilderingly. See `data/sources/nediger-LICENSE.txt`.
 - **ESDB** — © 2000–2026 Kevin Atkinson, which permits distributing word lists created from

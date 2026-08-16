@@ -27,6 +27,7 @@ src/Words.LexiconBuilding/   merges word lists in a directory into the artefact
 src/Words.Cli/                `words` executable
 tests/Words.Core.Tests/       xUnit, against a small hand-written lexicon
 tests/Words.LexiconBuilding.Tests/  reader parsing and merge behaviour
+tests/Words.Cli.Tests/        result ordering and limiting
 tests/Words.Core.Benchmarks/  BenchmarkDotNet, holds the performance targets
 data/sources/                 pinned ESDB + Nediger lists, with their licence texts
 data/lexicon.gz               generated artefact, with its manifest alongside
@@ -242,27 +243,44 @@ suppressed.
 `notaproblem --compose` finds `amble pronto` and `aplomb tenor`;
 `"encyclopaedias." --compose` finds `abs encyclopedia`.
 
-### 6 — CLI
+### 6 — CLI ✅
 
-`words pattern` and `words anagram` on System.CommandLine 2.0, plus `words lexicon build
-<dir>` for rebuilding from a directory of lists, `words add <entry>` for personal
-additions, and `words licence` reproducing every bundled source's terms.
+Five commands: `pattern` (`pat`), `anagram` (`anag`), `add`, `lexicon` (`lex`) and
+`licence` (`license`). Short aliases are functional and shown in the command list.
 
-Options: `--json`, `--limit` (unlimited by default; 200 under `--compose`),
-`--sort alpha|score|length` defaulting to alphabetical, `--source` to filter by provenance
-including `personal`, and `--include-racy`.
+`--json`, `--limit`, `--sort`, `--source` and `--include-racy` live in a shared
+`QueryOptions`, and both query commands hand off to a shared `QueryRunner`, so the two
+cannot drift apart in how they filter or present answers.
 
-Exit codes follow grep: `0` matches found, `1` none, `2` bad input. Truncation notices to
-stderr so stdout stays pipeable.
+`words licence` reproduces both bundled licences, which are **embedded in `Words.Core`**
+rather than read from `data/` — a self-contained binary has to be able to show them, and
+both sources require the notice to travel with anything distributed.
 
-Handle shell globbing explicitly: `?` and `[abc]` are glob characters, and zsh aborts the
-command outright on an unmatched glob before the app starts. Accept the pattern as a bare
-argument, via `--pattern`, and via stdin; when several bare arguments arrive looking like
-filenames, say specifically that the pattern needs quoting.
+JSON is **source-generated** so it keeps working under NativeAOT in phase 8, and uses the
+relaxed encoder: the default escapes anything HTML-unsafe, turning `inlet's` into
+`inlet\u0027s` and `café` into `caf\u00e9`.
 
-*Done when:* the documented invocations work from a clean zsh shell, including the
-unquoted-pattern case producing a useful error, and a word added via `words add` appears
-in the next query.
+`Results.Arrange` is where the limit and the sort order interact, and is unit-tested in a
+new `Words.Cli.Tests` project. When there are more answers than the limit allows, the
+survivors are chosen by how likely they are — fewest words, then the weakest word — and
+only then put into the requested display order. Truncating in display order would return
+every answer beginning with A and nothing else.
+
+Two notes on the option surface, cosmetic but worth recording:
+
+- `--limit` is `int?` rather than carrying a sentinel default, because `[default: -1]` in
+  the help reads as though it were a real limit.
+- `--sort` declares no default value, because `Alpha` is the zero value and binding
+  produces it anyway; declaring it printed `[default: Alpha]` against a lowercase list.
+
+**`--sort length` is weaker than it sounds.** Every answer to a given query has the same
+number of *letters* — a pattern fixes its length, and an anagram uses every letter — so it
+only distinguishes composed answers, where the number of words varies. Implemented as
+specified, but close to a no-op for single-word answers.
+
+*Done.* 205 tests green. From a clean zsh shell, `words add zzzqqq` followed by
+`words pattern ZZZQQQ` goes from exit 1 to exit 0 with the word returned, and an unquoted
+`words pattern C?T` produces the quoting explanation.
 
 ### 7 — Test and benchmark layer
 

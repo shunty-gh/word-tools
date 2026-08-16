@@ -8,13 +8,12 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–5 are
-complete.** `Words.Core` has the entry model, normalisation, the artefact format, the
-`Lexicon` with both indexes, the source abstractions, both query kinds and composition via
-`WordEngine`; the merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
-embedded into `Words.Core`. **Phase 6 onwards is not started** — there is no `--json`,
-`--limit`, `--sort`, `--source`, `--include-racy`, `words add` or `words licence`. Check
-the plan before assuming a type exists.
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–6 are
+complete** — the CLI is feature-complete: `pattern`, `anagram`, `add`, `lexicon` and
+`licence`, with `--json`, `--limit`, `--sort`, `--source` and `--include-racy`. The merged
+lexicon (500,451 entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`.
+**Phases 7–8 are not started** — no property-based tests, no benchmarks, and no packaging
+as a `dotnet tool` or NativeAOT binary.
 
 ## Commands
 
@@ -113,6 +112,15 @@ must be passed on every `InvokeAsync` path, not just the help one.
 **Composition produces each partition once** because every component taken must contain the
 lowest letter still unused (`AnagramComposer`). Removing that rule silently doubles or
 triples the results with reorderings of answers already found.
+
+**Limiting happens before sorting, not after** (`Results.Arrange`). Survivors are chosen by
+likelihood — fewest words, then the weakest word — and only then put into the requested
+display order. Applying `--limit` after an alphabetical sort would return every answer
+beginning with A and nothing else.
+
+**JSON output is source-generated** (`JsonResultsContext`) so it survives NativeAOT in
+phase 8, and uses `UnsafeRelaxedJsonEscaping` — the default encoder escapes apostrophes and
+accents, which mangles answers like `inlet's` and `café`.
 
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer

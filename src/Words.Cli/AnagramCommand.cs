@@ -6,11 +6,6 @@ namespace Words.Cli;
 /// <summary>
 /// <c>words anagram</c> — answers that use exactly these letters.
 /// </summary>
-/// <remarks>
-/// Minimal for phase 4, like <see cref="PatternCommand"/>. <c>--compose</c> is phase 5;
-/// <c>--json</c>, <c>--limit</c>, <c>--sort</c>, <c>--source</c> and <c>--include-racy</c>
-/// are phase 6.
-/// </remarks>
 internal static class AnagramCommand
 {
     /// <summary>See <see cref="PatternCommand"/> for why this is only one line.</summary>
@@ -23,6 +18,7 @@ internal static class AnagramCommand
           words anagram trisec.             '.' is a letter you do not know yet
           words anagram "trisec?"           '?' means the same, but must be quoted
           words anagram catdog --compose    answers built from separate words
+          words anagram listen --json       answers as JSON
 
         Letters using '?' must be quoted. Use '.' instead and you can normally do
         without. If in doubt, quote it — single or double.
@@ -31,13 +27,12 @@ internal static class AnagramCommand
         long as the letters plus the blanks. At most 3 blanks, or 1 when composing.
 
         Composed answers are built from ordinary single words, never from phrases or
-        proper nouns. Only the 200 most likely are shown.
+        proper nouns, and are capped at 200 unless --limit says otherwise.
         """;
 
     /// <summary>
-    /// How many composed answers to show. Composition can produce thousands, so the most
-    /// likely are kept — see the ranking in <see cref="RunAsync"/>. `--limit` arrives in
-    /// phase 6.
+    /// Composition can produce thousands of answers, so it caps by default. The cap keeps
+    /// the most likely — see <see cref="Results.Arrange"/>.
     /// </summary>
     private const int ComposeLimit = 200;
 
@@ -50,23 +45,6 @@ internal static class AnagramCommand
                 + "Spaces, hyphens, apostrophes and accents are all forgiven.",
         };
 
-        var compose = new Option<bool>("--compose", "-c")
-        {
-            Description = "Also build answers out of two or more separate words.",
-        };
-
-        var components = new Option<int>("--components")
-        {
-            Description = "How many words a composed answer may use, 2 or 3.",
-            DefaultValueFactory = _ => 2,
-        };
-
-        var minLength = new Option<int>("--min-length")
-        {
-            Description = "The shortest word a composed answer may use.",
-            DefaultValueFactory = _ => 3,
-        };
-
         // See PatternCommand: absorbs the filenames a shell substitutes for an unquoted
         // argument, so the command can explain itself instead of failing obscurely.
         var expanded = new Argument<string[]>("expanded")
@@ -74,6 +52,27 @@ internal static class AnagramCommand
             Arity = ArgumentArity.ZeroOrMore,
             Hidden = true,
         };
+
+        var compose = new Option<bool>("--compose", "-c")
+        {
+            Description = "Also build answers out of two or more separate words.",
+        };
+
+        var components = new Option<int>("--components")
+        {
+            Description = "How many words a composed answer may use.",
+            DefaultValueFactory = _ => 2,
+            HelpName = "2|3",
+        };
+
+        var minLength = new Option<int>("--min-length")
+        {
+            Description = "The shortest word a composed answer may use.",
+            DefaultValueFactory = _ => 3,
+            HelpName = "n",
+        };
+
+        var options = new QueryOptions();
 
         var command = new Command("anagram", Summary)
         {
@@ -84,19 +83,26 @@ internal static class AnagramCommand
             minLength,
         };
 
+        options.AddTo(command);
         command.Aliases.Add("anag");
 
-        command.SetAction((parseResult, cancellationToken) => RunAsync(
-            parseResult.GetValue(letters) ?? string.Empty,
-            parseResult.GetValue(expanded) ?? [],
-            parseResult.GetValue(compose)
-                ? new CompositionOptions
-                {
-                    MaxComponents = parseResult.GetValue(components),
-                    MinComponentLength = parseResult.GetValue(minLength),
-                }
-                : null,
-            cancellationToken));
+        command.SetAction((parseResult, cancellationToken) =>
+        {
+            var composing = parseResult.GetValue(compose);
+
+            return RunAsync(
+                parseResult.GetValue(letters) ?? string.Empty,
+                parseResult.GetValue(expanded) ?? [],
+                composing
+                    ? new CompositionOptions
+                    {
+                        MaxComponents = parseResult.GetValue(components),
+                        MinComponentLength = parseResult.GetValue(minLength),
+                    }
+                    : null,
+                options.Read(parseResult, defaultLimit: composing ? ComposeLimit : int.MaxValue),
+                cancellationToken);
+        });
 
         return command;
     }
@@ -105,6 +111,7 @@ internal static class AnagramCommand
         string letters,
         string[] expanded,
         CompositionOptions? compose,
+        QuerySettings settings,
         CancellationToken cancellationToken)
     {
         if (expanded.Length > 0)
@@ -131,7 +138,7 @@ internal static class AnagramCommand
         try
         {
             matches = engine.QueryAsync(
-                new AnagramQuery { Letters = letters, Compose = compose },
+                new AnagramQuery { Letters = letters, Filter = settings.Filter, Compose = compose },
                 cancellationToken);
         }
         catch (QuerySyntaxException error)
@@ -145,52 +152,6 @@ internal static class AnagramCommand
             return ExitCodes.BadRequest;
         }
 
-        var found = new List<Match>();
-
-        try
-        {
-            await foreach (var match in matches.ConfigureAwait(false))
-            {
-                found.Add(match);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ctrl-C. Say nothing — the user knows — but do not report the partial search
-            // as though it had found nothing.
-            return ExitCodes.Interrupted;
-        }
-
-        var total = found.Count;
-
-        // Composition can produce thousands of answers, so the cap has to select
-        // meaningfully rather than alphabetically: rank by fewest words, then by the
-        // weakest word in the answer, and keep the best.
-        if (compose is not null && total > ComposeLimit)
-        {
-            found = [.. found
-                .OrderBy(m => m.Components.Count)
-                .ThenByDescending(m => m.Score)
-                .ThenBy(m => m.DisplayForm, StringComparer.OrdinalIgnoreCase)
-                .Take(ComposeLimit)];
-        }
-
-        // Alphabetical is the default ordering; `--sort` arrives in phase 6.
-        found.Sort((left, right) =>
-            StringComparer.OrdinalIgnoreCase.Compare(left.DisplayForm, right.DisplayForm));
-
-        foreach (var match in found)
-        {
-            Console.WriteLine(match.DisplayForm);
-        }
-
-        if (found.Count < total)
-        {
-            // Stderr, so a pipe to wc or grep sees only answers.
-            Console.Error.WriteLine(
-                $"words: showing the {found.Count:N0} most likely of {total:N0} answers.");
-        }
-
-        return total > 0 ? ExitCodes.Found : ExitCodes.NothingFound;
+        return await QueryRunner.RunAsync(matches, settings, cancellationToken).ConfigureAwait(false);
     }
 }

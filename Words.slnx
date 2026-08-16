@@ -5,6 +5,7 @@
     <Project Path="src/Words.LexiconBuilding/Words.LexiconBuilding.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Words.Cli.Tests/Words.Cli.Tests.csproj" />
     <Project Path="tests/Words.Core.Benchmarks/Words.Core.Benchmarks.csproj" />
     <Project Path="tests/Words.Core.Tests/Words.Core.Tests.csproj" />
     <Project Path="tests/Words.LexiconBuilding.Tests/Words.LexiconBuilding.Tests.csproj" />

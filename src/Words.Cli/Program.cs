@@ -2,11 +2,12 @@ using System.CommandLine;
 using System.CommandLine.Help;
 using Words.Cli;
 
-// `words add` and `words licence` arrive in phase 6. See docs/plan-cli.md.
 var root = new RootCommand("Crossword and anagram solver.");
 root.Subcommands.Add(PatternCommand.Create());
 root.Subcommands.Add(AnagramCommand.Create());
+root.Subcommands.Add(AddCommand.Create());
 root.Subcommands.Add(LexiconCommand.Create());
+root.Subcommands.Add(LicenceCommand.Create());
 
 var parseResult = root.Parse(args);
 
