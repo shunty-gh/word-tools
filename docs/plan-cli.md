@@ -282,14 +282,53 @@ specified, but close to a no-op for single-word answers.
 `words pattern ZZZQQQ` goes from exit 1 to exit 0 with the word returned, and an unquoted
 `words pattern C?T` produces the quoting explanation.
 
-### 7 — Test and benchmark layer
+### 7 — Test and benchmark layer ✅
 
-Property-based tests (CsCheck or FsCheck) for the three invariants: every anagram match is
-a permutation of the supplied letters plus blanks; every pattern match has exactly the
-pattern's length; every composition's components account for precisely the letters
-supplied. BenchmarkDotNet covers cold start and warm query time.
+**Property-based tests** (CsCheck — a new dependency, C#-native so it does not drag in
+`FSharp.Core` the way FsCheck would). Six properties, each generating a small lexicon and
+then deriving its query from an entry in it, so none can pass by finding nothing:
 
-*Done when:* properties pass over generated input and benchmarks record a baseline.
+- every anagram answer is a permutation of the letters given
+- a blank adds exactly one letter to the answer
+- every pattern answer has exactly the pattern's length
+- every pattern answer matches position by position
+- every composition accounts for precisely the letters supplied
+- composition only ever uses ordinary single words, all at or above the minimum length
+
+Stable over 2,000 iterations as well as the default 100.
+
+**Benchmarks.** Cold start, on the committed lexicon:
+
+| | Mean | Allocated |
+| --- | ---: | ---: |
+| Load only | 101 ms | 137 MB |
+| Load + length index (a pattern query) | 108 ms | 151 MB |
+| Load + anagram index (an anagram query) | 240 ms | 257 MB |
+
+Warm queries, both indexes already built:
+
+| | Mean |
+| --- | ---: |
+| `anagram listen` (one lookup) | 211 ns |
+| `anagram trisec.` (one blank, 26 lookups) | 1.2 µs |
+| `pattern C.T` (3 letters) | 12 µs |
+| `compose notaproblem` (2 words) | 63 µs |
+| `anagram ab???` (three blanks, 3,276 lookups) | 146 µs |
+| `pattern A.....R.E.T` (11 letters) | 289 µs |
+| `compose encyclopaedias` (3 words) | 12.2 ms |
+
+**A pattern's cost is the size of its length bucket, not how specific it looks.** The
+11-letter pattern is 23× slower than the 3-letter one, because there are 50,440 eleven-letter
+entries and only 3,416 three-letter ones. Buckets peak at nine letters (57,963), so the worst
+pattern query scans about 58k entries — still a third of a millisecond, comfortably inside
+the sub-10 ms target. Only the three-word composition exceeds it, and only just.
+
+**Memory is the number to worry about.** A plain load allocates 137 MB and the anagram index
+takes it to 257 MB. That is allocation rather than retained working set, but it is well above
+the ~100 MB estimated earlier and it lands on the mobile concern already flagged. Worth
+measuring on a real device before MAUI work starts, not after.
+
+*Done.* 211 tests green; benchmark baselines recorded above.
 
 ### 8 — Packaging
 

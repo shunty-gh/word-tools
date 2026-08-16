@@ -8,12 +8,11 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–6 are
-complete** — the CLI is feature-complete: `pattern`, `anagram`, `add`, `lexicon` and
-`licence`, with `--json`, `--limit`, `--sort`, `--source` and `--include-racy`. The merged
-lexicon (500,451 entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`.
-**Phases 7–8 are not started** — no property-based tests, no benchmarks, and no packaging
-as a `dotnet tool` or NativeAOT binary.
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–7 are
+complete** — the CLI is feature-complete (`pattern`, `anagram`, `add`, `lexicon`,
+`licence`), with property-based tests and benchmark baselines. The merged lexicon (500,451
+entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`. **Phase 8 is not
+started** — no packaging as a `dotnet tool` or NativeAOT binary.
 
 ## Commands
 
@@ -33,7 +32,12 @@ dotnet run --project src/Words.Cli -- lexicon build data/sources -o data/lexicon
 dotnet run -c Release --project src/Words.Cli -- lexicon info
 
 dotnet run --project src/Words.Cli -- pattern "A?????R?E?T"     # note the quotes
-dotnet run -c Release --project tests/Words.Core.Benchmarks     # phase 7 onwards
+# Benchmarks. Baselines are recorded in docs/plan-cli.md — compare against them.
+dotnet run -c Release --project tests/Words.Core.Benchmarks -- --filter "*QueryBenchmarks*"
+dotnet run -c Release --project tests/Words.Core.Benchmarks -- --filter "*LoadBenchmarks*"
+
+# Property tests run 100 cases by default; raise it when changing the engine.
+CsCheck_Iter=2000 dotnet test tests/Words.Core.Tests --filter "EngineProperties"
 ```
 
 The SDK is pinned in `global.json`; the target framework, nullable and
@@ -121,6 +125,10 @@ beginning with A and nothing else.
 **JSON output is source-generated** (`JsonResultsContext`) so it survives NativeAOT in
 phase 8, and uses `UnsafeRelaxedJsonEscaping` — the default encoder escapes apostrophes and
 accents, which mangles answers like `inlet's` and `café`.
+
+**A pattern's cost is its length bucket, not how specific it looks.** Buckets peak at nine
+letters (~58k entries) and fall away at both ends, so an 11-letter pattern is 23× the work
+of a 3-letter one. Don't assume a long, mostly-literal pattern is the cheap case.
 
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer
