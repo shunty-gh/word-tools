@@ -57,6 +57,24 @@ public class PatternMatcherTests
     }
 
     [Fact]
+    public void AnEllipsisCountsAsThreeUnknownLetters()
+    {
+        // Apple platforms replace "..." with a single character as it is typed, so patterns
+        // arrive holding one where three dots were meant.
+        Assert.Equal(
+            PatternMatcher.Compile("A...D").Length,
+            PatternMatcher.Compile("A\u2026D").Length);
+
+        Assert.True(Matches("A\u2026D", "ABCDD"));
+        Assert.False(Matches("A\u2026D", "ABD"));
+    }
+
+    [Fact]
+    public void EllipsesCombineWithEverythingElse() =>
+        // a + three + b + three + one = nine letters.
+        Assert.Equal(9, PatternMatcher.Compile("a\u2026b\u2026?").Length);
+
+    [Fact]
     public void FullStopIsNotAllowedInsideAClass() =>
         Assert.Equal(4, Error("A[b.c]").Position);
 

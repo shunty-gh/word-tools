@@ -48,19 +48,28 @@ internal static class LexiconCommand
 
         info.SetAction(async (_, cancellationToken) =>
         {
+            // Retained, not allocated: benchmarks report allocation, which counts garbage and
+            // badly overstates what a phone would have to hold.
+            static double RetainedMb() => GC.GetTotalMemory(forceFullCollection: true) / 1024d / 1024d;
+
+            var baseline = RetainedMb();
+
             var stopwatch = Stopwatch.StartNew();
             var lexicon = await Composition.LoadLexiconAsync(cancellationToken).ConfigureAwait(false);
             var loadMs = stopwatch.ElapsedMilliseconds;
+            var loadedMb = RetainedMb();
 
             // Both indexes are lazy, so touching each one separately reports what a query of
-            // that kind would actually pay on a cold start.
+            // that kind would actually pay, in time and in memory.
             stopwatch.Restart();
             var lengths = lexicon.DistinctLengths;
             var lengthIndexMs = stopwatch.ElapsedMilliseconds;
+            var lengthIndexMb = RetainedMb();
 
             stopwatch.Restart();
             var anagramGroups = lexicon.DistinctCanonicalForms;
             var anagramIndexMs = stopwatch.ElapsedMilliseconds;
+            var anagramIndexMb = RetainedMb();
 
             var personal = lexicon.Entries.Count(e => e.Sources.HasFlag(Sources.Personal));
 
@@ -74,9 +83,12 @@ internal static class LexiconCommand
             Console.WriteLine($"  distinct lengths    {lengths,9:N0}");
             Console.WriteLine($"  anagram groups      {anagramGroups,9:N0}");
             Console.WriteLine();
-            Console.WriteLine($"  load                {loadMs,9:N0} ms   every query pays this");
-            Console.WriteLine($"  + length index      {lengthIndexMs,9:N0} ms   pattern queries only");
-            Console.WriteLine($"  + anagram index     {anagramIndexMs,9:N0} ms   anagram queries only");
+            Console.WriteLine("                          time        retained     added");
+            Console.WriteLine($"  load              {loadMs,7:N0} ms   {loadedMb,7:N0} MB   {loadedMb - baseline,7:N0} MB   every query pays this");
+            Console.WriteLine($"  + length index    {lengthIndexMs,7:N0} ms   {lengthIndexMb,7:N0} MB   {lengthIndexMb - loadedMb,7:N0} MB   pattern queries only");
+            Console.WriteLine($"  + anagram index   {anagramIndexMs,7:N0} ms   {anagramIndexMb,7:N0} MB   {anagramIndexMb - lengthIndexMb,7:N0} MB   anagram queries only");
+            Console.WriteLine();
+            Console.WriteLine($"  working set       {Environment.WorkingSet / 1024d / 1024d,10:N0} MB");
 
             return 0;
         });

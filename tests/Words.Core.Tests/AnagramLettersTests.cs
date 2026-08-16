@@ -35,6 +35,25 @@ public class AnagramLettersTests
         Assert.Equal(expected, AnagramLetters.Parse(input).Blanks);
 
     [Fact]
+    public void AnEllipsisCountsAsThreeBlanks()
+    {
+        // Apple platforms replace "..." with a single character as it is typed.
+        var letters = AnagramLetters.Parse("cat…");
+
+        Assert.Equal(3, letters.Blanks);
+        Assert.Equal(6, letters.Length);
+    }
+
+    [Fact]
+    public void AnEllipsisCanExceedTheBlankLimit()
+    {
+        // Three dots is already the maximum, so a letter plus an ellipsis is one too many.
+        var error = Error("cat.…");
+
+        Assert.Contains("At most 3", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LengthIsLettersPlusBlanks()
     {
         var letters = AnagramLetters.Parse("trisec?");

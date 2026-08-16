@@ -14,8 +14,8 @@ with property-based tests, benchmark baselines, a `dotnet tool` package and Nati
 binaries. The merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
 embedded into `Words.Core`.
 
-Next is MAUI, then the web app — both consume `Words.Core` unchanged. Read the "After the
-CLI" section of the plan first: the memory measurements there bear directly on mobile.
+**The MAUI app is started**, see [docs/plan-maui.md](docs/plan-maui.md). It targets Mac
+Catalyst only; it builds and launches, but its UI has not been visually verified yet.
 
 ## Commands
 
@@ -84,6 +84,10 @@ in help text or errors, even though `.` happens to agree with its regex meaning.
 **`.` and `?` are the same thing.** `.` exists solely because it is not a shell wildcard,
 so `words pattern A..D` works unquoted where `A??D` does not. Don't remove it as redundant.
 
+**`…` (U+2026) counts as three unknown letters**, in both parsers. Apple platforms
+substitute it for a typed `...`, so it arrives where three dots were meant — from a text
+field, from pasted text, from anywhere. Don't "clean up" the case as an oddity.
+
 **`?` means something different in each query kind.** A *cell* in a pattern (unknown
 letter, known position); a *blank* in an anagram (unknown letter, no position). See
 [CONTEXT.md](CONTEXT.md).
@@ -147,6 +151,22 @@ fine and only break when packaging. Both existing contexts (`JsonResultsContext`
 the OS's ICU, which is what keeps diacritic folding working. Enabling it would silently
 break `naïve` → `NAIVE`.
 
+**Shell's `TabBar` is deliberately not used.** On Mac Catalyst its labels render unreadably
+small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,
+`UITabBarAppearance` and `UISegmentedControl.Appearance` were each tried against clean
+builds and none had any effect. About is reached from an ordinary `Button` instead. Don't
+reintroduce Shell tabs expecting to control their type size.
+
+**`Words.Maui` targets one platform on purpose.** Adding a `TargetFrameworks` entry needs
+that platform's SDK present just to build, so an unused entry breaks `dotnet build` for
+everyone and takes CI with it. Add a platform and its CI runner together. The project also
+clears the repo-wide `TargetFramework` and opts out of central package management — both are
+load-bearing, see the comments in its csproj.
+
+**CI does not build the solution.** The Linux job builds `src/Words.Cli` and loops over
+`tests/*.Tests`, because Mac Catalyst cannot be built there; a separate macOS job builds the
+app. A new test project is picked up automatically; a new non-test project is not.
+
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer
 every syntax error to the first `await foreach`, far from the call that caused it.
@@ -154,6 +174,10 @@ every syntax error to the first `await foreach`, far from the call that caused i
 **Scores are not word frequency.** A crossword list rates how good an entry is as fill,
 which is a different judgement from how often a word is written. The field is `Score` for
 that reason; don't reintroduce `Frequency`.
+
+**The ESDB size of 80 is a licensing boundary, not just a quality one.** Its notice puts
+generated lists *larger than 80* under the UKACD copyright as well. Raising the size to 85
+for more coverage would pull in terms from the list ADR 0004 deliberately dropped.
 
 **The lexicon carries an attribution obligation.** Both sources are permissively licensed
 (Nediger MIT; ESDB permits derived word lists), but both notices must ship with anything

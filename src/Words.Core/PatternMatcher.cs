@@ -27,6 +27,9 @@ public sealed class PatternMatcher
 {
     private const uint AllLetters = (1u << 26) - 1;
 
+    /// <summary>U+2026, which Apple platforms substitute for three typed dots.</summary>
+    private const char Ellipsis = '…';
+
     private readonly uint[] _masks;
 
     private PatternMatcher(uint[] masks) => _masks = masks;
@@ -58,6 +61,16 @@ public sealed class PatternMatcher
             {
                 case '?':
                 case '.':
+                    masks.Add(AllLetters);
+                    i++;
+                    break;
+
+                case Ellipsis:
+                    // Apple platforms substitute "..." with a single ellipsis as it is
+                    // typed, so a pattern can arrive holding one where three dots were
+                    // meant. Reading it as three unknown letters is what the user asked for.
+                    masks.Add(AllLetters);
+                    masks.Add(AllLetters);
                     masks.Add(AllLetters);
                     i++;
                     break;

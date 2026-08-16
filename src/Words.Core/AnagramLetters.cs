@@ -19,6 +19,9 @@ public sealed class AnagramLetters
     /// </summary>
     public const int MaxBlanks = 3;
 
+    /// <summary>U+2026, which Apple platforms substitute for three typed dots.</summary>
+    private const char Ellipsis = '…';
+
     private AnagramLetters(string letters, int blanks)
     {
         Letters = letters;
@@ -64,15 +67,19 @@ public sealed class AnagramLetters
 
             switch (c)
             {
-                case '?' or '.':
-                    if (++blanks > maxBlanks)
+                // An ellipsis counts as the three dots it replaced: Apple platforms
+                // substitute it as the user types, so it arrives where "..." was meant.
+                case '?' or '.' or Ellipsis:
+                    blanks += c == Ellipsis ? 3 : 1;
+
+                    if (blanks > maxBlanks)
                     {
                         throw new QuerySyntaxException(
                             input,
                             i + 1,
                             maxBlanks == 1
-                                ? $"Only one unknown letter is allowed here, and this is number {blanks}."
-                                : $"At most {maxBlanks} unknown letters are allowed, and this is number {blanks}.");
+                                ? $"Only one unknown letter is allowed here, and this would make {blanks}."
+                                : $"At most {maxBlanks} unknown letters are allowed, and this would make {blanks}.");
                     }
 
                     break;

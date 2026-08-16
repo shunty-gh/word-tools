@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Words.Maui.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Words.Maui.ViewModels"
+    x:DataType="vm:SearchViewModel"
+    Shell.NavBarIsVisible="False"
+    Title="Words">
+
+    <Grid Padding="20,16,20,16" RowSpacing="14" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+
+        <!-- Two modes, so a switch rather than a list: a dropdown for two options is a
+             click for nothing. The labels dim to show which side is active. -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,*">
+            <HorizontalStackLayout Grid.Column="1" Spacing="10" HorizontalOptions="Center">
+                <Label
+                    Text="Crossword"
+                    FontSize="17"
+                    VerticalOptions="Center"
+                    Opacity="{Binding CrosswordOpacity}" />
+                <Switch IsToggled="{Binding IsAnagram}" VerticalOptions="Center" />
+                <Label
+                    Text="Anagram"
+                    FontSize="17"
+                    VerticalOptions="Center"
+                    Opacity="{Binding AnagramOpacity}" />
+            </HorizontalStackLayout>
+
+            <Button
+                Grid.Column="2"
+                Text="About"
+                FontSize="15"
+                Padding="14,6"
+                HorizontalOptions="End"
+                VerticalOptions="Center"
+                Clicked="OnAboutClicked" />
+        </Grid>
+
+        <!-- Spell check and prediction off: macOS otherwise substitutes a typed "..." with
+             a single ellipsis character mid-entry. The parser understands one anyway, but
+             it is better that the field shows what was typed. -->
+        <Entry
+            Grid.Row="1"
+            Text="{Binding Query}"
+            Placeholder="{Binding Placeholder}"
+            ClearButtonVisibility="WhileEditing"
+            ReturnCommand="{Binding SearchCommand}"
+            IsSpellCheckEnabled="False"
+            IsTextPredictionEnabled="False"
+            FontSize="20" />
+
+        <HorizontalStackLayout Grid.Row="2" Spacing="10" IsVisible="{Binding IsAnagram}">
+            <Switch IsToggled="{Binding Compose}" VerticalOptions="Center" />
+            <Label Text="Build answers from several words" FontSize="16" VerticalOptions="Center" />
+        </HorizontalStackLayout>
+
+        <Button
+            Grid.Row="3"
+            Text="Search"
+            FontSize="17"
+            Command="{Binding SearchCommand}"
+            HorizontalOptions="Start" />
+
+        <Border Grid.Row="4" Padding="0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+            <CollectionView
+                ItemsSource="{Binding Answers}"
+                HorizontalScrollBarVisibility="Never">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <Label Text="{Binding .}" FontSize="17" Padding="12,7" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label
+                        Text="Answers appear here."
+                        FontSize="16"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Opacity="0.5" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </Border>
+
+        <HorizontalStackLayout Grid.Row="5" Spacing="10">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <Label Text="{Binding Status}" FontSize="15" VerticalOptions="Center" Opacity="0.7" />
+        </HorizontalStackLayout>
+
+    </Grid>
+
+</ContentPage>

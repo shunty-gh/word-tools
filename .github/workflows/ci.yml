@@ -7,7 +7,10 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  # Everything that is not platform-specific. Builds the CLI, which pulls in the engine and
+  # the lexicon builder, rather than the whole solution — the MAUI app cannot be built here.
+  core:
+    name: engine, CLI and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -16,16 +19,33 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
-        run: dotnet restore
-
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build src/Words.Cli
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal
+        run: |
+          for project in tests/*.Tests; do
+            echo "::group::$project"
+            dotnet test "$project"
+            echo "::endgroup::"
+          done
 
       # Catches packaging regressions without waiting for a release run. The AOT publish
       # is not built here: it needs a per-platform runner and several minutes.
       - name: Pack
         run: dotnet pack src/Words.Cli -c Release -o nupkg
+
+  # Mac Catalyst is the only platform the app currently targets, and it can only be built
+  # on macOS. Add a job here when another platform is added to the project's TargetFrameworks.
+  maui:
+    name: MAUI (Mac Catalyst)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build src/Words.Maui -f net10.0-maccatalyst

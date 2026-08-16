@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Words.Maui.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Words.Maui"
+    Title="Words">
+
+    <!--
+        One page, no tab bar. Mac Catalyst draws Shell's tabs itself, at a size no UIKit
+        appearance API could reach — three attempts through UITabBarItem.Appearance,
+        UITabBarAppearance and UISegmentedControl.Appearance all left the labels unreadably
+        small. About is reached from a button on the page instead, which we can style.
+    -->
+    <ShellContent
+        ContentTemplate="{DataTemplate local:MainPage}"
+        Route="MainPage" />
+
+</Shell>

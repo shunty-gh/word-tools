@@ -3,6 +3,7 @@
     <Project Path="src/Words.Cli/Words.Cli.csproj" />
     <Project Path="src/Words.Core/Words.Core.csproj" />
     <Project Path="src/Words.LexiconBuilding/Words.LexiconBuilding.csproj" />
+    <Project Path="src/Words.Maui/Words.Maui.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Words.Cli.Tests/Words.Cli.Tests.csproj" />

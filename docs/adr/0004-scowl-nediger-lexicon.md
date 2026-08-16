@@ -46,6 +46,10 @@ a header recording the exact parameters used, so the artefact is self-documentin
   and `REALIZE` are different letter multisets, so they yield different anagram results.
 - **Size 80** of the available 35–85. For a solver a false positive costs a glance and a
   false negative costs the puzzle, and `Score` lets obscure entries rank low rather than vanish.
+  Size 80 is also a **licensing boundary**: ESDB's notice puts a generated word list *larger
+  than 80* under the UKACD copyright (J Ross Beresford) as well. At exactly 80 it does not
+  apply, so raising the size for coverage would quietly acquire the terms of the very list
+  this ADR dropped.
 - **Spelling variant level 8** (uncommon). Chosen empirically rather than cautiously: level 8
   yields only 1.8% more entries than level 2, so the feared flood of junk does not exist,
   while the archaic and uncommon spellings it admits are exactly what crosswords lean on.
