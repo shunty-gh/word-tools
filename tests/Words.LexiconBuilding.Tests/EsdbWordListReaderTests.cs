@@ -1,7 +1,7 @@
 using Words.Core;
-using Words.Lexicon.Building;
+using Words.LexiconBuilding;
 
-namespace Words.Lexicon.Building.Tests;
+namespace Words.LexiconBuilding.Tests;
 
 public class EsdbWordListReaderTests
 {

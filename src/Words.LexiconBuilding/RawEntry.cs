@@ -1,6 +1,6 @@
 using Words.Core;
 
-namespace Words.Lexicon.Building;
+namespace Words.LexiconBuilding;
 
 /// <summary>
 /// One entry as a word list stated it, before merging. The score has already been mapped

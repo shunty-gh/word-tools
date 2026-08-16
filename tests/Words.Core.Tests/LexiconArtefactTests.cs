@@ -12,7 +12,7 @@ public class LexiconArtefactTests
         Entry.Create("cat", 100, Sources.Esdb | Sources.Nediger),
     ];
 
-    private static async Task<IReadOnlyList<Entry>> RoundTripAsync(IEnumerable<Entry> entries)
+    private static async Task<IReadOnlyList<Entry>> RoundTripAsync(IReadOnlyCollection<Entry> entries)
     {
         using var stream = new MemoryStream();
         await LexiconArtefact.WriteAsync(stream, entries);

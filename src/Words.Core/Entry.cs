@@ -43,6 +43,22 @@ public sealed record Entry(
     }
 
     /// <summary>
+    /// Combines this entry with another statement of the same display form: take the most
+    /// generous score, union the provenance, and stay racy if either said so.
+    /// </summary>
+    /// <remarks>
+    /// Used both when building the artefact and when merging sources at load, so the two
+    /// can never drift apart. Merging is keyed on display form, never search key — see
+    /// <see href="../../docs/adr/0004-scowl-nediger-lexicon.md">ADR 0004</see>.
+    /// </remarks>
+    public Entry CombineWith(int score, Sources sources, bool isRacy) => this with
+    {
+        Score = Math.Max(Score, score),
+        Sources = Sources | sources,
+        IsRacy = IsRacy || isRacy,
+    };
+
+    /// <summary>
     /// A phrase is an entry whose display form contains a space. A proper noun is one
     /// whose first letter is capitalised — word lists carry no metadata, so this is
     /// inferred, and it will misfile acronyms and sentence-cased entries.

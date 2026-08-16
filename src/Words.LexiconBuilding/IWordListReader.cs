@@ -1,4 +1,4 @@
-namespace Words.Lexicon.Building;
+namespace Words.LexiconBuilding;
 
 /// <summary>
 /// Reads one format of word list. Readers identify their own files by content rather than

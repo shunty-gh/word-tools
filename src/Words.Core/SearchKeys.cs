@@ -22,10 +22,47 @@ public static class SearchKeys
     /// becoming an ASCII letter — were a source ever to contain æ or ß — is dropped rather
     /// than guessed at, which would show up as a missing entry rather than a wrong match.
     /// </remarks>
+    /// <summary>Above this length a key is heap-allocated rather than stack-allocated.</summary>
+    private const int StackAllocLimit = 256;
+
     public static string From(string displayForm)
     {
         ArgumentNullException.ThrowIfNull(displayForm);
 
+        // Normalisation dominates the cost of loading the lexicon and allocates a fresh
+        // string even when there is nothing to decompose. The overwhelming majority of
+        // entries are pure ASCII — all of Nediger, and all but a few hundred characters of
+        // ESDB — so they skip it entirely.
+        return Ascii.IsValid(displayForm)
+            ? FromAscii(displayForm)
+            : FromUnicode(displayForm);
+    }
+
+    private static string FromAscii(string displayForm)
+    {
+        Span<char> key = displayForm.Length <= StackAllocLimit
+            ? stackalloc char[displayForm.Length]
+            : new char[displayForm.Length];
+
+        var length = 0;
+
+        foreach (var c in displayForm)
+        {
+            if (c is >= 'A' and <= 'Z')
+            {
+                key[length++] = c;
+            }
+            else if (c is >= 'a' and <= 'z')
+            {
+                key[length++] = (char)(c - ('a' - 'A'));
+            }
+        }
+
+        return new string(key[..length]);
+    }
+
+    private static string FromUnicode(string displayForm)
+    {
         var decomposed = displayForm.Normalize(NormalizationForm.FormD);
         var key = new StringBuilder(decomposed.Length);
 
@@ -57,8 +94,13 @@ public static class SearchKeys
     {
         ArgumentNullException.ThrowIfNull(searchKey);
 
-        var letters = searchKey.ToCharArray();
-        Array.Sort(letters);
+        Span<char> letters = searchKey.Length <= StackAllocLimit
+            ? stackalloc char[searchKey.Length]
+            : new char[searchKey.Length];
+
+        searchKey.CopyTo(letters);
+        letters.Sort();
+
         return new string(letters);
     }
 }

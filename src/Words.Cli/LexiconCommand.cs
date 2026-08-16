@@ -1,6 +1,7 @@
 using System.CommandLine;
+using System.Diagnostics;
 using Words.Core;
-using Words.Lexicon.Building;
+using Words.LexiconBuilding;
 
 namespace Words.Cli;
 
@@ -36,7 +37,50 @@ internal static class LexiconCommand
 
         var lexicon = new Command("lexicon", "Build and inspect the lexicon.");
         lexicon.Subcommands.Add(build);
+        lexicon.Subcommands.Add(CreateInfo());
         return lexicon;
+    }
+
+    private static Command CreateInfo()
+    {
+        var info = new Command("info", "Load the lexicon and report what is in it, and how long it took.");
+
+        info.SetAction(async (_, cancellationToken) =>
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var lexicon = await Composition.LoadLexiconAsync(cancellationToken).ConfigureAwait(false);
+            var loadMs = stopwatch.ElapsedMilliseconds;
+
+            // Both indexes are lazy, so touching each one separately reports what a query of
+            // that kind would actually pay on a cold start.
+            stopwatch.Restart();
+            var lengths = lexicon.DistinctLengths;
+            var lengthIndexMs = stopwatch.ElapsedMilliseconds;
+
+            stopwatch.Restart();
+            var anagramGroups = lexicon.DistinctCanonicalForms;
+            var anagramIndexMs = stopwatch.ElapsedMilliseconds;
+
+            var personal = lexicon.Entries.Count(e => e.Sources.HasFlag(Sources.Personal));
+
+            Console.WriteLine($"  sources             {string.Join(", ", lexicon.SourceNames)}");
+            Console.WriteLine($"  entries             {lexicon.Count,9:N0}");
+            Console.WriteLine($"  single words        {lexicon.Entries.Count(e => e.Kinds.HasFlag(EntryKinds.SingleWord)),9:N0}");
+            Console.WriteLine($"  phrases             {lexicon.Entries.Count(e => e.Kinds.HasFlag(EntryKinds.Phrase)),9:N0}");
+            Console.WriteLine($"  proper nouns        {lexicon.Entries.Count(e => e.Kinds.HasFlag(EntryKinds.ProperNoun)),9:N0}");
+            Console.WriteLine($"  racy                {lexicon.Entries.Count(e => e.IsRacy),9:N0}");
+            Console.WriteLine($"  personal            {personal,9:N0}  ({Composition.PersonalWordsPath})");
+            Console.WriteLine($"  distinct lengths    {lengths,9:N0}");
+            Console.WriteLine($"  anagram groups      {anagramGroups,9:N0}");
+            Console.WriteLine();
+            Console.WriteLine($"  load                {loadMs,9:N0} ms   every query pays this");
+            Console.WriteLine($"  + length index      {lengthIndexMs,9:N0} ms   pattern queries only");
+            Console.WriteLine($"  + anagram index     {anagramIndexMs,9:N0} ms   anagram queries only");
+
+            return 0;
+        });
+
+        return info;
     }
 
     private static async Task<int> BuildAsync(

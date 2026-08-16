@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Words.Lexicon.Building;
+namespace Words.LexiconBuilding;
 
 /// <summary>One source file that contributed to the artefact.</summary>
 public sealed record LexiconSourceInfo(string Reader, string File, string Sha256, int EntriesRead);

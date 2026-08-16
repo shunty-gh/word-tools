@@ -1,7 +1,7 @@
 using System.Globalization;
 using Words.Core;
 
-namespace Words.Lexicon.Building;
+namespace Words.LexiconBuilding;
 
 /// <summary>
 /// Reads the Nediger crossword list: one <c>entry;score</c> pair per line.

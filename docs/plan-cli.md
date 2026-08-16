@@ -23,10 +23,10 @@ See [CONTEXT.md](../CONTEXT.md) for the vocabulary used throughout, and
 
 ```
 src/Words.Core/               engine: model, lexicon loading, indexes, queries
-src/Words.Lexicon.Building/   merges word lists in a directory into the artefact
+src/Words.LexiconBuilding/   merges word lists in a directory into the artefact
 src/Words.Cli/                `words` executable
 tests/Words.Core.Tests/       xUnit, against a small hand-written lexicon
-tests/Words.Lexicon.Building.Tests/  reader parsing and merge behaviour
+tests/Words.LexiconBuilding.Tests/  reader parsing and merge behaviour
 tests/Words.Core.Benchmarks/  BenchmarkDotNet, holds the performance targets
 data/sources/                 pinned ESDB + Nediger lists, with their licence texts
 data/lexicon.gz               generated artefact, with its manifest alongside
@@ -55,7 +55,7 @@ All five ESDB size bands are vendored, not just size 80: the inline lists carry 
 per-entry score, and since the bands are cumulative supersets, the smallest band an entry
 appears in reconstructs the missing frequency signal.
 
-`Words.Lexicon.Building` reads *every* list in a directory, identifying each file by
+`Words.LexiconBuilding` reads *every* list in a directory, identifying each file by
 content rather than name, so licence and readme files are skipped without configuration.
 Entries deduplicate on **display form** — not search key, which would collapse `Polish`
 into `polish` — merging provenance and taking the most generous score.
@@ -66,12 +66,15 @@ pass: `red herring` keeps its space, `podcast`/`realise`/`realize` all present, 
 displays its diaeresis while keying as `NAIVE`, `Polish` and `polish` both survive.
 62 tests green.
 
-### 2 — Model and indexes
+### 2 — Model and indexes ✅
 
-Partly delivered by phase 1, which needed it: `Entry`, `EntryKinds`, `Sources`,
-`SearchKeys` (normalisation and canonical form) and `LexiconArtefact` (stream-based read
-and write) already exist and are tested. What remains is the `Lexicon` type itself, the two
-indexes, `ILexiconSource`, `IPersonalWordStore`, and the CLI composition root.
+`Entry`, `EntryKinds`, `Sources`, `SearchKeys`, `LexiconArtefact`, `Lexicon`,
+`ILexiconSource`, `IPersonalWordStore` and the CLI composition root are all in place. The
+artefact is embedded in `Words.Core`, so every front end gets a working lexicon with no
+deployment step.
+
+The `IWordEngine` sketch below is unchanged and still belongs to phases 3–5; `Match`
+does not exist yet.
 
 ```csharp
 public sealed record Entry(
@@ -118,11 +121,26 @@ sources overriding earlier display forms — see
 built-in artefact followed by personal words. `Words.Core` never constructs a source or
 touches the file system; the CLI's composition root does.
 
-Two indexes built at load: entries bucketed by search-key length (patterns), and entries
-keyed by canonical form — search key with letters sorted — for anagrams.
+Two indexes, both **lazy**: entries bucketed by search-key length (patterns), and entries
+keyed by canonical form — search key with letters sorted — for anagrams. Laziness was not
+in the original design and was forced by measurement, below.
 
-*Done when:* the artefact and a personal-words file load together as two sources, both
-indexes are populated, and cold start is within budget.
+*Done.* Both sources load and merge, both indexes populate, 81 tests green.
+
+**Cold start needed work to meet its budget.** The first honest measurement was **615 ms**,
+against a 300 ms target. Four changes brought it down:
+
+| Change | Why it mattered |
+| --- | --- |
+| ASCII fast path in `SearchKeys.From` | Unicode normalisation ran on all 500k display forms and allocates even when nothing decomposes; nearly all entries are pure ASCII |
+| Buffer then parse synchronously | 500k `ReadLineAsync` calls cost more in state machines than the parsing itself |
+| Skip the merge dictionary and the sort | With one contributing source they were 500k inserts and a half-million-element sort for no benefit |
+| Build both indexes lazily | A pattern query never needs the anagram index, which is the expensive one |
+
+Measured on the committed lexicon: **load 118 ms**, plus **7 ms** for the length index or
+**149 ms** for the anagram index. So a pattern query pays ~125 ms and an anagram query
+~267 ms, both inside budget. Process wall clock adds JIT warm-up on top, which is what
+NativeAOT in phase 8 is for.
 
 ### 3 — Pattern queries
 

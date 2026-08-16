@@ -8,11 +8,13 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0 and 1 are
-complete.** `Words.Core` has the entry model, search-key normalisation and the artefact
-format; the merged lexicon (500,451 entries) is built and committed at `data/lexicon.gz`.
-**Phase 2 onwards is not started** — there are no indexes and no queries yet, and the CLI
-exposes only `lexicon build`. Check the plan before assuming a type exists.
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–2 are
+complete.** `Words.Core` has the entry model, normalisation, the artefact format, the
+`Lexicon` with both indexes, and the source abstractions; the merged lexicon (500,451
+entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`. **Phase 3
+onwards is not started** — there are no queries yet, `Match` and `IWordEngine` do not
+exist, and the CLI exposes only `lexicon build` and `lexicon info`. Check the plan before
+assuming a type exists.
 
 ## Commands
 
@@ -26,6 +28,10 @@ dotnet test --filter "DisplayName~folds diacritics"             # one test
 # Rebuild the lexicon after changing anything in data/sources/. The artefact and its
 # manifest are committed, so review the diff before committing a rebuild.
 dotnet run --project src/Words.Cli -- lexicon build data/sources -o data/lexicon.gz
+
+# What the lexicon holds, and what loading it costs. Use this after touching the load
+# path — it reports load time and each index separately.
+dotnet run -c Release --project src/Words.Cli -- lexicon info
 
 dotnet run --project src/Words.Cli -- pattern "A??D??R?E?T"     # phase 6; note the quotes
 dotnet run -c Release --project tests/Words.Core.Benchmarks     # phase 7 onwards
@@ -80,9 +86,21 @@ that reason; don't reintroduce `Frequency`.
 distributed. `words licence` and the MAUI/web About screens are release requirements, not
 niceties ([ADR 0004](docs/adr/0004-scowl-nediger-lexicon.md)).
 
-**`data/lexicon.gz` is generated but committed.** Don't hand-edit it, and don't regenerate
-it casually — a rebuild from unchanged inputs is byte-identical by design, so any diff
-means an input actually changed. The manifest records each source's SHA-256.
+**`data/lexicon.gz` is generated but committed**, and embedded into `Words.Core` at build
+time. Don't hand-edit it, and don't regenerate it casually — a rebuild from unchanged
+inputs is byte-identical by design, so any diff means an input actually changed. The
+manifest records each source's SHA-256.
+
+**The load path is performance-sensitive and was tuned deliberately.** Cold start started
+at 615ms against a 300ms budget. The ASCII fast path in `SearchKeys.From`, the buffer-then-
+parse-synchronously shape of `LexiconArtefact.ReadAsync`, the lazily-built indexes, and the
+absence of a sort in `Lexicon.LoadAsync` are all load-bearing. Re-measure with
+`lexicon info` after touching any of them; tidying them into more obvious-looking code will
+cost hundreds of milliseconds on every CLI invocation.
+
+**The builder project is `Words.LexiconBuilding`, not `Words.Lexicon.Building`.** The
+latter creates a `Words.Lexicon` namespace that shadows the `Lexicon` *type* from anywhere
+inside `Words.*`, which breaks every CLI file that needs both. Don't "tidy" the name back.
 
 ## Conventions
 

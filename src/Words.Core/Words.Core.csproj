@@ -5,4 +5,14 @@
     front ends all consume this project unchanged. Keep it that way.
   -->
 
+  <!--
+    The built lexicon travels with the assembly, so every front end works without a
+    deployment step. Conditional so a clone with no artefact yet still builds — the
+    failure then surfaces at runtime from EmbeddedLexicon, which says how to fix it.
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)../../data/lexicon.gz')">
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../data/lexicon.gz"
+                      LogicalName="Words.Core.lexicon.gz" />
+  </ItemGroup>
+
 </Project>

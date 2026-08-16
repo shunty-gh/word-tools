@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using Words.Core;
 
-namespace Words.Lexicon.Building;
+namespace Words.LexiconBuilding;
 
 public sealed record LexiconBuildResult(IReadOnlyList<Entry> Entries, LexiconManifest Manifest);
 
@@ -92,13 +92,7 @@ public static class LexiconBuilder
     {
         if (merged.TryGetValue(raw.DisplayForm, out var existing))
         {
-            merged[raw.DisplayForm] = existing with
-            {
-                Score = Math.Max(existing.Score, raw.Score),
-                Sources = existing.Sources | raw.Source,
-                IsRacy = existing.IsRacy || raw.IsRacy,
-            };
-
+            merged[raw.DisplayForm] = existing.CombineWith(raw.Score, raw.Source, raw.IsRacy);
             return;
         }
 
