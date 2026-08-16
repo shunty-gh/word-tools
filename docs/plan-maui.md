@@ -5,18 +5,19 @@ The desktop and mobile front end, over the same `Words.Core` the CLI uses. See
 
 ## Decisions
 
-**Mac Catalyst first.** The project targets `net10.0-maccatalyst` and nothing else. Every
-additional platform needs its SDK present merely to *build* — Android wants the Android SDK,
-iOS wants Xcode, Windows wants Windows — so listing a platform nobody is working on breaks
-`dotnet build` for everyone and takes CI with it. Add a platform when work on it starts, and
-give it a CI runner at the same time.
+**Mac Catalyst and iOS.** Every platform listed in `TargetFrameworks` needs its SDK present
+merely to *build*, so one nobody is working on breaks `dotnet build` for everyone and takes
+CI with it. Add a platform only alongside its CI job. Android builds but is not enabled;
+Windows cannot be built on macOS at all.
 
-**The storage rework is deferred, not forgotten.** The lexicon retains **223 MB** with both
-indexes built (140 MB entries, 7 MB length index, 77 MB anagram index), and the working set
-is 225 MB. That is fine on desktop and questionable on a phone. Deferred because the honest
-next step is a measurement on a real device, which needs an app to exist first — and because
-the fix can stay internal: `Entry` can keep its current property surface while slicing
-shared `char[]` buffers behind it. See "Memory" below.
+**The anagram index has been reworked; the entries have not.** Retained memory is **160 MB**
+with both indexes built, down from 223 MB. The remaining 140 MB is the entries themselves.
+See "Memory" below for what that would take and what it would buy.
+
+**The web app will be API-backed**, not WebAssembly, so the engine runs on a server there.
+That leaves mobile as the only memory-constrained target, and weakens the WebAssembly
+rationale in [ADR 0002](./adr/0002-streaming-query-results.md) — though streaming still earns
+its place through early exit and cancellation.
 
 **No workload install was needed.** Mac Catalyst builds with the .NET 10 SDK as it stands.
 
@@ -49,69 +50,48 @@ come from `$(MauiVersion)`, which `Directory.Packages.props` cannot resolve.
 
 ## Memory
 
-The number that decides whether the current design survives on iOS:
+| Stage | Retained | Before the anagram rework |
+| --- | ---: | ---: |
+| Entries loaded | 140 MB | 140 MB |
+| + length index (pattern queries) | 147 MB | 147 MB |
+| + anagram index (anagram queries) | **160 MB** | 223 MB |
 
-| Stage | Retained |
-| --- | ---: |
-| Entries loaded | 140 MB |
-| + length index (pattern queries) | 147 MB |
-| + anagram index (anagram queries) | 223 MB |
+**The anagram index went from 77 MB to 14 MB.** Most of that 77 MB was never the keys: it
+was 437,476 separate `Entry[]` arrays, the majority holding a single entry and each carrying
+an object header, plus the `List<Entry>` used to build every one. It is now one array of
+entries sorted by canonical form, with the canonical forms concatenated into a single `char`
+buffer and found by binary search — see `AnagramIndex`.
 
-140 MB across 500,451 entries is 293 bytes each, for an average of 11 characters of display
-form and 11 of search key. The cost is object overhead: each entry is a heap object holding
-two further heap objects. Flattened into shared `char[]` buffers with offsets, the same data
-is about **27 MB**.
+The cost is roughly **double the per-lookup time**: 19 span comparisons instead of one hash.
+Warm queries went from 211 ns to 256 ns for a single lookup, and from 146 µs to 251 µs for
+the 3,276 lookups of three blanks. Against a 10 ms target that is not worth defending.
 
-The lazy anagram index already helps — a session that only ever runs pattern queries holds
-147 MB, not 223 MB.
+A packed letter-count key would be smaller again, but the lexicon contains an entry with
+**sixteen of one letter** — "Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo
+buffalo" — so no fixed bit width is obviously safe, and a collision would mean wrong answers
+rather than slow ones.
 
-**Next step is a measurement on a real device, not a rewrite.** Desktop tolerates this
-comfortably; the question is what iOS does under memory pressure.
+### What remains
 
-## Platforms
+The entries themselves are still **140 MB**, which is 293 bytes each for an average of 11
+characters of display form and 11 of search key. The cost is object overhead: each entry is
+a heap object holding two more. Flattened into shared `char[]` buffers with offsets, the
+same data is about **27 MB**, which would put the whole app near 60 MB.
 
-Mac Catalyst is the only one in `TargetFrameworks`. What each of the others needs:
+That change is contained but not free. `Words.Cli` and `Words.Maui` never name `Entry` — the
+only front-end contact is three member names read off `Match.Components` — and `SearchKey`
+never escapes the engine. So the work lands in `Words.Core`, in the tests that construct
+entries, and awkwardly on `ILexiconSource`, which hands over `IReadOnlyList<Entry>`: copying
+those into flat arrays would make *peak* load memory worse unless that seam changes too, and
+that seam exists to keep a remote source possible ([ADR 0006](./adr/0006-lexicon-loads-from-ordered-sources.md)).
 
-| Platform | State |
-| --- | --- |
-| Mac Catalyst | Working, and the only one in `TargetFrameworks`. No workload install was needed. |
-| iOS | **Verified building.** Xcode with the iOS 26.5 SDK. One line to enable. |
-| Android | **Verified building**, once API 36 was installed — Android Studio's SDK had only `android-36.1`, and .NET looks for `android-36`. |
-| Windows | Cannot be built on macOS at all. Needs a Windows machine or a CI runner. |
+**Mobile is the only memory-constrained target.** The web app is planned as an API-backed
+service rather than WebAssembly, so `Words.Core` will run on a server where 160 MB is
+unremarkable. An earlier version of this plan claimed the web app was the strongest argument
+for flattening; that is no longer true, and the case now rests on iOS and Android alone.
 
-Only Mac Catalyst is enabled, because every extra target is built on each full solution
-build and the UI loop is tight. Re-enabling either is a one-line change; add its CI runner
-at the same time.
-
-## No tab bar
-
-Shell's `TabBar` was removed. Its labels rendered unreadably small on Mac Catalyst and
-**no UIKit appearance API would touch them** — `UITabBarItem.Appearance` (ignored since
-iOS 15 whenever an appearance object is in use), `UITabBarAppearance`, and
-`UISegmentedControl.Appearance` were each tried against a clean build and each did nothing.
-MAUI draws that control itself on Catalyst.
-
-For a two-page app the tab bar was heavyweight regardless, so About is now reached from an
-ordinary `Button` on the page, which we style like anything else. Don't reintroduce Shell
-tabs expecting to control their type size.
-
-The nav bar is hidden too (`Shell.NavBarIsVisible="False"`): it repeated the window title.
-
-The template's default font size is 14 throughout `Resources/Styles/Styles.xaml`, which
-reads small on a Mac; raised to 16, with the search field and results larger still.
-
-## Text substitution
-
-macOS replaces a typed `...` with a single `…` (U+2026) as you type, which reached the
-parser as an unknown character and produced an error where the user had done nothing wrong.
-
-Fixed in two places, deliberately:
-
-- `PatternMatcher` and `AnagramLetters` read `…` as three unknown letters. This is the
-  robust fix: it also covers pasted text and the CLI, where the same substitution can arrive
-  from anywhere.
-- The MAUI `Entry` sets `IsSpellCheckEnabled` and `IsTextPredictionEnabled` to false, so the
-  field shows what was actually typed rather than silently rewriting it.
+**It cannot be settled on a simulator**, which runs on the Mac's RAM with no jetsam limits,
+and there is no physical device to test on.
 
 ## Status
 
@@ -124,10 +104,20 @@ The first anagram of a session took 738 ms against the CLI's ~270 ms, because th
 anagram index is built on first use in a Debug build. Worth re-checking in Release before
 treating it as a problem.
 
+**Personal words and query options are done**, and verified on screen: adding
+`quzzlewump` through the prompt, then searching for it, returns it. Options are behind a
+self-rolled disclosure — order, only-my-words, include-rude, and the compose bounds, which
+appear only while composing.
+
+Adding a word calls `LexiconService.Invalidate()`, so the next search reloads and picks it
+up. That search cost **1,593 ms** in Debug, being a full reload plus an anagram index
+rebuild. Acceptable for an occasional action, but if adding words becomes routine it is the
+obvious thing to make incremental — a single entry could be merged into the loaded lexicon
+rather than discarding it.
+
 Next, roughly in order:
 
-1. Personal words: an "add" affordance, matching `words add`.
-2. Options — sources, racy, limit, sort, compose depth — only compose is exposed so far.
-3. Visual design. It is functional and plain.
-4. Measure on an iOS device, then decide on the flattened store.
-5. Add platforms one at a time, each with its CI runner.
+1. Visual design. It is functional and plain.
+2. Measure on an iOS device, then decide on the flattened store.
+3. Add platforms one at a time, each with its CI runner.
+4. Possibly: merge a personal word into the loaded lexicon instead of reloading.

@@ -1,9 +1,27 @@
-using Words.Core;
+namespace Words.Core;
 
-namespace Words.Cli;
+/// <summary>How answers are ordered for display.</summary>
+public enum SortOrder
+{
+    /// <summary>Alphabetical, ignoring case. The usual default.</summary>
+    Alpha,
 
-/// <summary>Chooses which answers to show, and in what order.</summary>
-internal static class Results
+    /// <summary>Most likely first.</summary>
+    Score,
+
+    /// <summary>Shortest first. Only distinguishes composed answers, which vary in words.</summary>
+    Length,
+}
+
+/// <summary>
+/// Chooses which answers to show, and in what order.
+/// </summary>
+/// <remarks>
+/// Presentation rather than engine, but it lives here so that every front end applies the
+/// same rule. The CLI and the app had their own copies, which is precisely how two versions
+/// of a subtle rule quietly diverge.
+/// </remarks>
+public static class MatchOrdering
 {
     /// <summary>
     /// Applies the limit and the sort order.

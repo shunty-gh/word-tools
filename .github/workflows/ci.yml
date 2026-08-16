@@ -35,11 +35,16 @@ jobs:
       - name: Pack
         run: dotnet pack src/Words.Cli -c Release -o nupkg
 
-  # Mac Catalyst is the only platform the app currently targets, and it can only be built
-  # on macOS. Add a job here when another platform is added to the project's TargetFrameworks.
+  # Both of the app's targets need macOS to build. Add a matrix entry whenever a platform is
+  # added to the project's TargetFrameworks — Android would build here too, Windows would
+  # need its own runner.
   maui:
-    name: MAUI (Mac Catalyst)
+    name: MAUI (${{ matrix.framework }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: [net10.0-maccatalyst, net10.0-ios]
     steps:
       - uses: actions/checkout@v7
 
@@ -48,4 +53,4 @@ jobs:
           global-json-file: global.json
 
       - name: Build
-        run: dotnet build src/Words.Maui -f net10.0-maccatalyst
+        run: dotnet build src/Words.Maui -f ${{ matrix.framework }}

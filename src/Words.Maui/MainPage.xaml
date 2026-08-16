@@ -8,34 +8,25 @@
     Shell.NavBarIsVisible="False"
     Title="Words">
 
-    <Grid Padding="20,16,20,16" RowSpacing="14" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Grid Padding="20,16,20,16" RowSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
 
         <!-- Two modes, so a switch rather than a list: a dropdown for two options is a
              click for nothing. The labels dim to show which side is active. -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,*">
-            <HorizontalStackLayout Grid.Column="1" Spacing="10" HorizontalOptions="Center">
-                <Label
-                    Text="Crossword"
-                    FontSize="17"
-                    VerticalOptions="Center"
-                    Opacity="{Binding CrosswordOpacity}" />
-                <Switch IsToggled="{Binding IsAnagram}" VerticalOptions="Center" />
-                <Label
-                    Text="Anagram"
-                    FontSize="17"
-                    VerticalOptions="Center"
-                    Opacity="{Binding AnagramOpacity}" />
-            </HorizontalStackLayout>
-
-            <Button
-                Grid.Column="2"
-                Text="About"
-                FontSize="15"
-                Padding="14,6"
-                HorizontalOptions="End"
+        <!-- The switch sits alone on its row: on a phone it cannot share a line with the
+             buttons, and "Anagram" ends up clipped. -->
+        <HorizontalStackLayout Grid.Row="0" Spacing="10" HorizontalOptions="Center">
+            <Label
+                Text="Crossword"
+                FontSize="17"
                 VerticalOptions="Center"
-                Clicked="OnAboutClicked" />
-        </Grid>
+                Opacity="{Binding CrosswordOpacity}" />
+            <Switch IsToggled="{Binding IsAnagram}" VerticalOptions="Center" />
+            <Label
+                Text="Anagram"
+                FontSize="17"
+                VerticalOptions="Center"
+                Opacity="{Binding AnagramOpacity}" />
+        </HorizontalStackLayout>
 
         <!-- Spell check and prediction off: macOS otherwise substitutes a typed "..." with
              a single ellipsis character mid-entry. The parser understands one anyway, but
@@ -55,17 +46,65 @@
             <Label Text="Build answers from several words" FontSize="16" VerticalOptions="Center" />
         </HorizontalStackLayout>
 
-        <Button
+        <Border
             Grid.Row="3"
-            Text="Search"
-            FontSize="17"
-            Command="{Binding SearchCommand}"
-            HorizontalOptions="Start" />
+            IsVisible="{Binding ShowOptions}"
+            Padding="16,12"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 8">
+            <VerticalStackLayout Spacing="10">
 
-        <Border Grid.Row="4" Padding="0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
-            <CollectionView
-                ItemsSource="{Binding Answers}"
-                HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="Order" FontSize="16" VerticalOptions="Center" WidthRequest="80" />
+                    <Picker
+                        ItemsSource="{Binding SortOrders}"
+                        SelectedIndex="{Binding SortIndex}"
+                        FontSize="16"
+                        WidthRequest="180" />
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="10">
+                    <Switch IsToggled="{Binding OnlyMyWords}" VerticalOptions="Center" />
+                    <Label Text="Only my own words" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="10">
+                    <Switch IsToggled="{Binding IncludeRacy}" VerticalOptions="Center" />
+                    <Label Text="Include rude words" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <!-- Only meaningful while composing, so only shown then. -->
+                <HorizontalStackLayout Spacing="10" IsVisible="{Binding Compose}">
+                    <Label Text="Build from" FontSize="16" VerticalOptions="Center" WidthRequest="80" />
+                    <Picker
+                        ItemsSource="{Binding WordCounts}"
+                        SelectedIndex="{Binding WordCountIndex}"
+                        FontSize="16"
+                        WidthRequest="130" />
+                    <Label Text="at least" FontSize="16" VerticalOptions="Center" />
+                    <Picker
+                        ItemsSource="{Binding MinLengths}"
+                        SelectedIndex="{Binding MinLengthIndex}"
+                        FontSize="16"
+                        WidthRequest="140" />
+                    <Label Text="each" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+            </VerticalStackLayout>
+        </Border>
+
+        <HorizontalStackLayout Grid.Row="4" Spacing="8">
+            <Button Text="Search" FontSize="17" Command="{Binding SearchCommand}" />
+            <Button Text="Add word" FontSize="15" Padding="12,6" Clicked="OnAddWordClicked" />
+            <Button
+                Text="{Binding OptionsLabel}"
+                Command="{Binding ToggleOptionsCommand}"
+                FontSize="15"
+                Padding="12,6" />
+        </HorizontalStackLayout>
+
+        <Border Grid.Row="5" Padding="0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+            <CollectionView ItemsSource="{Binding Answers}" HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
                         <Label Text="{Binding .}" FontSize="17" Padding="12,7" />
@@ -82,10 +121,24 @@
             </CollectionView>
         </Border>
 
-        <HorizontalStackLayout Grid.Row="5" Spacing="10">
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-            <Label Text="{Binding Status}" FontSize="15" VerticalOptions="Center" Opacity="0.7" />
-        </HorizontalStackLayout>
+        <!-- About is a licence screen, rarely opened, so it lives quietly on the status
+             line rather than taking header space that a phone does not have. -->
+        <Grid Grid.Row="6" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+            <ActivityIndicator Grid.Column="0" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <Label
+                Grid.Column="1"
+                Text="{Binding Status}"
+                FontSize="15"
+                VerticalOptions="Center"
+                Opacity="0.7" />
+            <Button
+                Grid.Column="2"
+                Text="About"
+                FontSize="14"
+                Padding="10,4"
+                VerticalOptions="Center"
+                Clicked="OnAboutClicked" />
+        </Grid>
 
     </Grid>
 

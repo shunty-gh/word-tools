@@ -1,9 +1,8 @@
-using Words.Cli;
 using Words.Core;
 
-namespace Words.Cli.Tests;
+namespace Words.Core.Tests;
 
-public class ResultsTests
+public class MatchOrderingTests
 {
     private const int NoLimit = int.MaxValue;
 
@@ -14,7 +13,7 @@ public class ResultsTests
         new([.. words.Select(w => Entry.Create(w.Word, w.Score, Sources.Esdb))]);
 
     private static string[] Arrange(IReadOnlyList<Match> matches, SortOrder sort, int limit) =>
-        [.. Results.Arrange(matches, sort, limit).Select(m => m.DisplayForm)];
+        [.. MatchOrdering.Arrange(matches, sort, limit).Select(m => m.DisplayForm)];
 
     [Fact]
     public void SortsAlphabeticallyByDefault()

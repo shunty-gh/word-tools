@@ -3,19 +3,6 @@ using Words.Core;
 
 namespace Words.Cli;
 
-/// <summary>How answers are ordered for display.</summary>
-internal enum SortOrder
-{
-    /// <summary>Alphabetical, ignoring case. The default.</summary>
-    Alpha,
-
-    /// <summary>Most likely first.</summary>
-    Score,
-
-    /// <summary>Shortest first. Only distinguishes composed answers, which vary in words.</summary>
-    Length,
-}
-
 /// <summary>What a query should return and how it should be shown.</summary>
 internal sealed record QuerySettings(EntryFilter Filter, bool Json, int Limit, SortOrder Sort);
 

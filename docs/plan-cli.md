@@ -307,17 +307,17 @@ Stable over 2,000 iterations as well as the default 100.
 | --- | ---: | ---: |
 | Load only | 101 ms | 137 MB |
 | Load + length index (a pattern query) | 108 ms | 151 MB |
-| Load + anagram index (an anagram query) | 240 ms | 257 MB |
+| Load + anagram index (an anagram query) | 269 ms | 181 MB |
 
 Warm queries, both indexes already built:
 
 | | Mean |
 | --- | ---: |
-| `anagram listen` (one lookup) | 211 ns |
-| `anagram trisec.` (one blank, 26 lookups) | 1.2 µs |
+| `anagram listen` (one lookup) | 256 ns |
+| `anagram trisec.` (one blank, 26 lookups) | 2.4 µs |
 | `pattern C.T` (3 letters) | 12 µs |
 | `compose notaproblem` (2 words) | 63 µs |
-| `anagram ab???` (three blanks, 3,276 lookups) | 146 µs |
+| `anagram ab???` (three blanks, 3,276 lookups) | 251 µs |
 | `pattern A.....R.E.T` (11 letters) | 289 µs |
 | `compose encyclopaedias` (3 words) | 12.2 ms |
 
@@ -327,10 +327,11 @@ entries and only 3,416 three-letter ones. Buckets peak at nine letters (57,963),
 pattern query scans about 58k entries — still a third of a millisecond, comfortably inside
 the sub-10 ms target. Only the three-word composition exceeds it, and only just.
 
-**Memory is the number to worry about.** A plain load allocates 137 MB and the anagram index
-takes it to 257 MB. That is allocation rather than retained working set, but it is well above
-the ~100 MB estimated earlier and it lands on the mobile concern already flagged. Worth
-measuring on a real device before MAUI work starts, not after.
+**Memory is the number to worry about.** A plain load allocates 137 MB. These anagram
+figures are *after* the index was rebuilt as a sorted array with ranges — it previously
+allocated 257 MB and retained 77 MB, against 181 MB and 14 MB now, at the cost of roughly
+doubling per-lookup time. See docs/plan-maui.md for the reasoning and the numbers that
+remain.
 
 *Done.* 211 tests green; benchmark baselines recorded above.
 

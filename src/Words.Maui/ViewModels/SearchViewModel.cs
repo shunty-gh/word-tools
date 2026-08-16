@@ -7,13 +7,17 @@ using Words.Maui.Services;
 
 namespace Words.Maui.ViewModels;
 
-public sealed partial class SearchViewModel(LexiconService lexicon) : ObservableObject
+public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWordStore personalWords)
+    : ObservableObject
 {
     /// <summary>
     /// A list view will happily bind thousands of rows, but nobody reads them, and a broad
     /// composition can produce tens of thousands. The count reported below is the true one.
     /// </summary>
     private const int DisplayLimit = 500;
+
+    /// <summary>Dims the label on the side of the switch that is not active.</summary>
+    private const double Inactive = 0.4;
 
     private CancellationTokenSource? _running;
 
@@ -34,7 +38,33 @@ public sealed partial class SearchViewModel(LexiconService lexicon) : Observable
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
+    public partial bool ShowOptions { get; set; }
+
+    [ObservableProperty]
     public partial string Status { get; set; } = "Ready.";
+
+    // -- options, mirroring the CLI's --sort, --include-racy, --source and compose bounds --
+
+    public IReadOnlyList<string> SortOrders { get; } = ["Alphabetical", "Most likely", "Shortest"];
+
+    [ObservableProperty]
+    public partial int SortIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool IncludeRacy { get; set; }
+
+    [ObservableProperty]
+    public partial bool OnlyMyWords { get; set; }
+
+    public IReadOnlyList<string> WordCounts { get; } = ["2 words", "3 words"];
+
+    [ObservableProperty]
+    public partial int WordCountIndex { get; set; }
+
+    public IReadOnlyList<string> MinLengths { get; } = ["2 letters", "3 letters", "4 letters"];
+
+    [ObservableProperty]
+    public partial int MinLengthIndex { get; set; } = 1;
 
     public ObservableCollection<string> Answers { get; } = [];
 
@@ -42,18 +72,47 @@ public sealed partial class SearchViewModel(LexiconService lexicon) : Observable
         ? "Your letters, with . for each one you don't know"
         : "Letters and gaps, like A..D or RED.ERRING";
 
-    /// <summary>Dims the label on the side of the switch that is not active.</summary>
-    private const double Inactive = 0.4;
-
     public double CrosswordOpacity => IsAnagram ? Inactive : 1;
 
     public double AnagramOpacity => IsAnagram ? 1 : Inactive;
+
+    public string OptionsLabel => ShowOptions ? "Options ▲" : "Options ▼";
 
     partial void OnIsAnagramChanged(bool value)
     {
         OnPropertyChanged(nameof(Placeholder));
         OnPropertyChanged(nameof(CrosswordOpacity));
         OnPropertyChanged(nameof(AnagramOpacity));
+    }
+
+    partial void OnShowOptionsChanged(bool value) => OnPropertyChanged(nameof(OptionsLabel));
+
+    [RelayCommand]
+    private void ToggleOptions() => ShowOptions = !ShowOptions;
+
+    /// <summary>
+    /// Adds a word to the personal list and discards the loaded lexicon, so the next search
+    /// finds it.
+    /// </summary>
+    public async Task AddWordAsync(string? displayForm)
+    {
+        var word = displayForm?.Trim() ?? string.Empty;
+
+        if (word.Length == 0)
+        {
+            return;
+        }
+
+        if (SearchKeys.From(word).Length == 0)
+        {
+            Status = $"'{word}' has no letters, so it could never be an answer.";
+            return;
+        }
+
+        await personalWords.AddAsync(word).ConfigureAwait(true);
+        lexicon.Invalidate();
+
+        Status = $"Added '{word}'. It will be included from your next search.";
     }
 
     [RelayCommand]
@@ -121,17 +180,34 @@ public sealed partial class SearchViewModel(LexiconService lexicon) : Observable
 
     private sealed record Found(IReadOnlyList<string> Shown, int Total);
 
+    private EntryFilter BuildFilter() => new()
+    {
+        Sources = OnlyMyWords ? Core.Sources.Personal : Core.Sources.All,
+        IncludeRacy = IncludeRacy,
+    };
+
     private async Task<Found> CollectAsync(WordEngine engine, CancellationToken cancellationToken)
     {
+        var filter = BuildFilter();
+
         var matches = IsAnagram
             ? engine.QueryAsync(
                 new AnagramQuery
                 {
                     Letters = Query,
-                    Compose = Compose ? CompositionOptions.Default : null,
+                    Filter = filter,
+                    Compose = Compose
+                        ? new CompositionOptions
+                        {
+                            MaxComponents = WordCountIndex + 2,
+                            MinComponentLength = MinLengthIndex + 2,
+                        }
+                        : null,
                 },
                 cancellationToken)
-            : engine.QueryAsync(new PatternQuery { Pattern = Query }, cancellationToken);
+            : engine.QueryAsync(
+                new PatternQuery { Pattern = Query, Filter = filter },
+                cancellationToken);
 
         var all = new List<Match>();
 
@@ -140,17 +216,18 @@ public sealed partial class SearchViewModel(LexiconService lexicon) : Observable
             all.Add(match);
         }
 
-        // Same rule as the CLI: when truncating, keep the most likely and only then sort
-        // for display, so the cap does not simply keep everything beginning with A.
-        var shown = all
-            .OrderBy(m => m.Components.Count)
-            .ThenByDescending(m => m.Score)
-            .Take(DisplayLimit)
-            .OrderBy(m => m.DisplayForm, StringComparer.OrdinalIgnoreCase)
-            .Select(m => m.DisplayForm)
-            .ToList();
+        // Mapped explicitly rather than cast from the index, so reordering the picker's
+        // labels cannot silently change what the options mean.
+        var sort = SortIndex switch
+        {
+            1 => SortOrder.Score,
+            2 => SortOrder.Length,
+            _ => SortOrder.Alpha,
+        };
 
-        return new Found(shown, all.Count);
+        var shown = MatchOrdering.Arrange(all, sort, DisplayLimit);
+
+        return new Found([.. shown.Select(m => m.DisplayForm)], all.Count);
     }
 
     private static string Describe(Found found, long elapsedMs)

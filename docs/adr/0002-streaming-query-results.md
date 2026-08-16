@@ -18,3 +18,12 @@ the browser event loop. A method returning a completed list has no such opportun
 
 This is the one place where the engine must actively cooperate with its hosts: the
 chunked yield is not an optimisation and should not be removed as one.
+
+## Update: the web app is API-backed
+
+The planned web front end calls a service rather than running the engine in WebAssembly, so
+the single-threaded-host argument above no longer applies to it. The decision stands on its
+original grounds — a composition can produce thousands of matches from a search the user may
+abandon, and streaming is what makes early exit and cancellation possible. The chunked yield
+is now load-bearing for **cancellation** rather than for browser responsiveness; it is what
+makes Ctrl-C interrupt a long composition promptly.

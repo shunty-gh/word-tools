@@ -5,15 +5,14 @@
 		     project multi-targets per platform, so it has to clear that first. -->
 		<TargetFramework />
 
-		<!-- Mac Catalyst only while the UI is being worked on, because every extra target
-		     is built on each full solution build and the loop is tight.
+		<!-- Every platform listed here needs its SDK present merely to build, so a target
+		     nobody is working on breaks `dotnet build` for everyone, not just for that
+		     platform. Add one only alongside its CI job.
 
-		     iOS and Android are both verified to build on this machine (Xcode, and the
-		     Android SDK with API 36). Adding either back is a one-line change — but add its
-		     CI runner at the same time, and note that a platform whose SDK is missing breaks
-		     `dotnet build` for everyone, not just for that platform. Windows cannot be built
-		     on macOS at all. -->
-		<TargetFrameworks>net10.0-maccatalyst</TargetFrameworks>
+		     Android is verified to build (Android SDK with API 36) but is not enabled: it is
+		     a third target on every full build and nothing has been tested there yet.
+		     Windows cannot be built on macOS at all. -->
+		<TargetFrameworks>net10.0-maccatalyst;net10.0-ios</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.

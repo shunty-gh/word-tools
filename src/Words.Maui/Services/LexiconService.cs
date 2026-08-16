@@ -29,6 +29,22 @@ public sealed class LexiconService(IPersonalWordStore personalWords)
     /// </summary>
     public void BeginLoading() => _ = GetEngineAsync();
 
+    /// <summary>
+    /// Discards the loaded lexicon so the next query rebuilds it.
+    /// </summary>
+    /// <remarks>
+    /// Needed after adding a personal word: the entries are merged at load, so without this
+    /// a word the user just added would not be found until the app restarted. Costs a
+    /// reload — a few hundred milliseconds — which is why it is not done on every query.
+    /// </remarks>
+    public void Invalidate()
+    {
+        lock (_gate)
+        {
+            _engine = null;
+        }
+    }
+
     private async Task<WordEngine> LoadAsync()
     {
         var lexicon = await Lexicon.LoadAsync(

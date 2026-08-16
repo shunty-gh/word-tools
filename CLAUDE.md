@@ -129,14 +129,23 @@ must be passed on every `InvokeAsync` path, not just the help one.
 lowest letter still unused (`AnagramComposer`). Removing that rule silently doubles or
 triples the results with reorderings of answers already found.
 
-**Limiting happens before sorting, not after** (`Results.Arrange`). Survivors are chosen by
-likelihood — fewest words, then the weakest word — and only then put into the requested
-display order. Applying `--limit` after an alphabetical sort would return every answer
-beginning with A and nothing else.
+**Limiting happens before sorting, not after** (`MatchOrdering.Arrange` in `Words.Core`).
+Survivors are chosen by likelihood — fewest words, then the weakest word — and only then put
+into the requested display order. Applying a limit after an alphabetical sort would return
+every answer beginning with A and nothing else. It lives in the engine rather than a front
+end because the CLI and the app both need it and had begun to keep separate copies.
 
 **JSON output is source-generated** (`JsonResultsContext`) so it survives NativeAOT in
 phase 8, and uses `UnsafeRelaxedJsonEscaping` — the default encoder escapes apostrophes and
 accents, which mangles answers like `inlet's` and `café`.
+
+**The anagram index is a sorted array with binary search, not a dictionary**
+(`AnagramIndex`). The dictionary version cost 77 MB against 14 MB now — mostly not the keys
+but 437k separate `Entry[]` arrays, each with an object header, plus a `List<Entry>` to build
+every one. The cost is roughly double the per-lookup time, which at 251 µs for the worst
+query is not worth reclaiming. A packed letter-count key would be smaller still, but an entry
+with sixteen of one letter ("Buffalo buffalo …") means no fixed bit width is safe, and a
+collision would give wrong answers rather than slow ones.
 
 **A pattern's cost is its length bucket, not how specific it looks.** Buckets peak at nine
 letters (~58k entries) and fall away at both ends, so an 11-letter pattern is 23× the work

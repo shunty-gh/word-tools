@@ -30,7 +30,7 @@ internal static class QueryRunner
         }
 
         var total = found.Count;
-        var shown = Results.Arrange(found, settings.Sort, settings.Limit);
+        var shown = MatchOrdering.Arrange(found, settings.Sort, settings.Limit);
 
         if (settings.Json)
         {

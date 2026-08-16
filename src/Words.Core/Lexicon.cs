@@ -25,7 +25,7 @@ public sealed class Lexicon
     private static readonly Entry[] None = [];
 
     private readonly Lazy<Dictionary<int, Entry[]>> _byLength;
-    private readonly Lazy<Dictionary<string, Entry[]>> _byCanonicalForm;
+    private readonly Lazy<AnagramIndex> _anagrams;
 
     /// <summary>
     /// Groups entries by a key. Written by hand rather than with <c>GroupBy</c>: over half a
@@ -82,8 +82,7 @@ public sealed class Lexicon
         _byLength = new Lazy<Dictionary<int, Entry[]>>(
             () => BuildIndex(entries, e => e.SearchKey.Length, comparer: null));
 
-        _byCanonicalForm = new Lazy<Dictionary<string, Entry[]>>(
-            () => BuildIndex(entries, e => SearchKeys.ToCanonical(e.SearchKey), StringComparer.Ordinal));
+        _anagrams = new Lazy<AnagramIndex>(() => AnagramIndex.Build(entries));
     }
 
     /// <summary>
@@ -102,7 +101,7 @@ public sealed class Lexicon
     public int DistinctLengths => _byLength.Value.Count;
 
     /// <summary>How many distinct canonical forms are present. Builds the anagram index.</summary>
-    public int DistinctCanonicalForms => _byCanonicalForm.Value.Count;
+    public int DistinctCanonicalForms => _anagrams.Value.GroupCount;
 
     /// <summary>Every entry whose search key is exactly <paramref name="length"/> letters.</summary>
     public IReadOnlyList<Entry> OfLength(int length) =>
@@ -113,7 +112,7 @@ public sealed class Lexicon
     /// <see cref="SearchKeys.ToCanonical"/> first.
     /// </summary>
     public IReadOnlyList<Entry> WithCanonicalForm(string canonicalForm) =>
-        _byCanonicalForm.Value.TryGetValue(canonicalForm, out var entries) ? entries : None;
+        _anagrams.Value.Lookup(canonicalForm);
 
     /// <summary>
     /// Loads and merges every source, in order.
