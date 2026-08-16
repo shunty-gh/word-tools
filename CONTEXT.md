@@ -60,9 +60,9 @@ one letter — never zero, never more than one. The two spellings are identical 
 _Avoid_: Wildcard, any-char
 
 **Blank**:
-An unknown letter in an anagram query, also written `?`, standing for one letter whose
-identity *and* position are both unknown. Every blank is consumed by the answer, so an
-answer's length is always the number of letters supplied plus the number of blanks.
+An unknown letter in an anagram query, also written `?` or `.`, standing for one letter
+whose identity *and* position are both unknown. Every blank is consumed by the answer, so
+an answer's length is always the number of letters supplied plus the number of blanks.
 _Avoid_: Wildcard, joker, unknown
 
 > `?` means something different in each query kind — a *cell* in a pattern (unknown

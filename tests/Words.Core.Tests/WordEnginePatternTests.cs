@@ -116,7 +116,7 @@ public class WordEnginePatternTests
         // some unrelated `await foreach`.
         var engine = new WordEngine(await TestLexicon.OfAsync("cat"));
 
-        Assert.Throws<PatternSyntaxException>(
+        Assert.Throws<QuerySyntaxException>(
             () => engine.QueryAsync(new PatternQuery { Pattern = "A*D" }));
     }
 

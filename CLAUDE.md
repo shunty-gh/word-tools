@@ -8,13 +8,13 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–3 are
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–4 are
 complete.** `Words.Core` has the entry model, normalisation, the artefact format, the
-`Lexicon` with both indexes, the source abstractions, and pattern queries via
+`Lexicon` with both indexes, the source abstractions, and both query kinds via
 `WordEngine`; the merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
-embedded into `Words.Core`. **Phase 4 onwards is not started** — there are no anagram
-queries, `AnagramQuery` does not exist, and `words pattern` is a minimal version with none
-of phase 6's options. Check the plan before assuming a type exists.
+embedded into `Words.Core`. **Phase 5 onwards is not started** — there is no composition
+(`--compose`), and `words pattern` / `words anagram` are minimal versions with none of
+phase 6's options. Check the plan before assuming a type exists.
 
 ## Commands
 
@@ -87,6 +87,11 @@ so quoting is only ever about globbing.
 solely to absorb the filenames a shell substitutes for an unquoted pattern, so the command
 can explain what happened instead of emitting "unrecognized argument". It also keeps the
 usage line honest about accepting exactly one pattern. Don't delete it as unused.
+
+**A command's `Description` must stay one line.** System.CommandLine uses it both in the
+command's own help and in the parent's command list, so a multi-paragraph description makes
+`words --help` unreadable. Examples and notes go in the command's `ExtendedHelp` constant,
+which `Program.cs` appends below the options of that command's own help.
 
 **Help output is rewritten on its way out**, in `HelpText` and `Program.cs`. The argument
 is *named* `"pattern"` (quotes included) because that is the only way to get quotes into

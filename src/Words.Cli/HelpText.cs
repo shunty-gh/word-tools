@@ -24,6 +24,20 @@ internal static partial class HelpText
     public static string WithQuotesOutsidePlaceholders(string help) =>
         QuotedPlaceholder().Replace(help, "\"<$1>\"");
 
+    /// <summary>
+    /// Examples and notes shown below a command's own help, or null if it has none.
+    /// </summary>
+    /// <remarks>
+    /// Kept out of the command's description because System.CommandLine uses that for the
+    /// parent's command list too, where several paragraphs each would bury the summaries.
+    /// </remarks>
+    public static string? ExtendedHelpFor(string commandName) => commandName switch
+    {
+        "pattern" => PatternCommand.ExtendedHelp,
+        "anagram" => AnagramCommand.ExtendedHelp,
+        _ => null,
+    };
+
     [GeneratedRegex("""<"([^"<>]*)">""")]
     private static partial Regex QuotedPlaceholder();
 }

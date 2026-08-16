@@ -36,6 +36,7 @@ internal static class LexiconCommand
             cancellationToken));
 
         var lexicon = new Command("lexicon", "Build and inspect the lexicon.");
+        lexicon.Aliases.Add("lex");
         lexicon.Subcommands.Add(build);
         lexicon.Subcommands.Add(CreateInfo());
         return lexicon;

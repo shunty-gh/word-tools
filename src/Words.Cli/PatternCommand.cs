@@ -12,9 +12,15 @@ namespace Words.Cli;
 /// </remarks>
 internal static class PatternCommand
 {
-    private const string PatternDescription = """
-        Find answers matching a crossword pattern.
+    /// <summary>
+    /// One line, because System.CommandLine shows a command's description both in its own
+    /// help and in the parent's command list. Anything longer swamps <c>words --help</c>.
+    /// </summary>
+    private const string Summary = "Find answers matching a crossword pattern.";
 
+    /// <summary>Appended to this command's own help, below the options.</summary>
+    public const string ExtendedHelp = """
+        Examples:
           words pattern A..D          '.' is one unknown letter, and needs no quotes
           words pattern RED.ERRING    grids have no spaces, so this finds "red herring"
           words pattern "A??D"        '?' means the same as '.', but must be quoted
@@ -48,11 +54,13 @@ internal static class PatternCommand
             Hidden = true,
         };
 
-        var command = new Command("pattern", PatternDescription)
+        var command = new Command("pattern", Summary)
         {
             pattern,
             expanded,
         };
+
+        command.Aliases.Add("pat");
 
         command.SetAction((parseResult, cancellationToken) => RunAsync(
             parseResult.GetValue(pattern) ?? string.Empty,
@@ -95,7 +103,7 @@ internal static class PatternCommand
         {
             matches = engine.QueryAsync(new PatternQuery { Pattern = pattern }, cancellationToken);
         }
-        catch (PatternSyntaxException error)
+        catch (QuerySyntaxException error)
         {
             Console.Error.WriteLine($"words: {error.ToDiagnostic()}");
             return 2;

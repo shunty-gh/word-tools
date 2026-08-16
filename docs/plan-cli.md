@@ -170,14 +170,33 @@ Worth recording: the plan's own example `A??D??R?E?T` has **no** matches in this
 the `D` in the fourth position rules everything out. It was always an illustration rather
 than a real answer, and a future reader should not take an empty result for a defect.
 
-### 4 — Anagram queries
+### 4 — Anagram queries ✅
 
-Canonical-form lookup for the zero-blank case. For blanks, enumerate letter multisets of
-size *k* (26, 351 and 3,276 for one, two and three blanks) and look each up. More than
-three blanks is an error.
+`AnagramLetters.Parse` reads user input into sorted letters plus a blank count, forgiving
+case, accents, spaces, hyphens and apostrophes so a phrase can be pasted in as it stands.
+`?` and `.` both mean a blank, for the same quoting reason patterns accept both.
 
-*Done when:* exact anagrams resolve, and blank counts up to three stay within the query
-budget.
+`CanonicalForms()` yields what to look up: one form with no blanks, otherwise one per
+combination *with repetition* of blank letters — 26, 351 and 3,276 for one, two and three.
+Generating them in non-decreasing order means every form is distinct, so no answer can be
+returned twice and no deduplication is needed. There is no scanning at all: an anagram
+query is pure index lookup.
+
+`QuerySyntaxException` is now shared by both query kinds — it was `PatternSyntaxException`
+— so malformed letters and malformed patterns report identically and the CLI needs one
+error path.
+
+*Done.* 175 tests green. Against the committed lexicon, `listen` returns ten answers
+including the phrase `lets in` and the possessive `inlet's`; `trisec.` returns 7-letter
+answers only; `ab???` returns 896 answers in 0.29 s including process start, all five
+letters — `blasé` among them, which confirms diacritic folding reaches the anagram index.
+Errors point at the offending character:
+
+```
+words: At most 3 unknown letters are allowed, and this is number 4.
+  cat????
+        ^
+```
 
 ### 5 — Composition
 

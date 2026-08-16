@@ -114,8 +114,8 @@ public class PatternMatcherTests
 
     // -- syntax errors. Positions count from 1, so they read as column numbers. --
 
-    private static PatternSyntaxException Error(string pattern) =>
-        Assert.Throws<PatternSyntaxException>(() => PatternMatcher.Compile(pattern));
+    private static QuerySyntaxException Error(string pattern) =>
+        Assert.Throws<QuerySyntaxException>(() => PatternMatcher.Compile(pattern));
 
     [Fact]
     public void RejectsAnEmptyPattern() => Assert.Equal(1, Error("").Position);

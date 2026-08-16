@@ -8,12 +8,19 @@ namespace Words.Core;
 public sealed class WordEngine(Lexicon lexicon) : IWordEngine
 {
     /// <summary>
-    /// How many candidates to examine between yields. Enumeration is CPU-bound, so on a
+    /// How many candidates to scan between yields. Enumeration is CPU-bound, so on a
     /// single-threaded host — a WebAssembly front end — it must hand control back
     /// periodically or the UI freezes for the duration of the search. Large enough that the
     /// yields cost nothing measurable on a desktop.
     /// </summary>
-    private const int YieldInterval = 8192;
+    private const int ScanYieldInterval = 8192;
+
+    /// <summary>
+    /// How many index lookups to perform between yields. Far smaller than
+    /// <see cref="ScanYieldInterval"/> because an anagram query does at most 3,276 lookups
+    /// in total — at the scan interval it would never yield at all.
+    /// </summary>
+    private const int LookupYieldInterval = 256;
 
     private readonly Lexicon _lexicon = lexicon ?? throw new ArgumentNullException(nameof(lexicon));
 
@@ -43,7 +50,7 @@ public sealed class WordEngine(Lexicon lexicon) : IWordEngine
 
         foreach (var entry in candidates)
         {
-            if (++examined % YieldInterval == 0)
+            if (++examined % ScanYieldInterval == 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await Task.Yield();
@@ -52,6 +59,46 @@ public sealed class WordEngine(Lexicon lexicon) : IWordEngine
             if (filter.Allows(entry) && matcher.Matches(entry.SearchKey))
             {
                 yield return Match.Of(entry);
+            }
+        }
+    }
+
+    public IAsyncEnumerable<Match> QueryAsync(
+        AnagramQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        // Parsed here rather than inside the iterator, for the same reason patterns are
+        // compiled early: bad input should be reported at the call.
+        var letters = AnagramLetters.Parse(query.Letters);
+
+        return EnumerateAnagramMatches(letters, query.Filter, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<Match> EnumerateAnagramMatches(
+        AnagramLetters letters,
+        EntryFilter filter,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // No scanning at all: every candidate answer is an index lookup on the sorted
+        // letters, one per combination of blanks.
+        var lookups = 0;
+
+        foreach (var canonicalForm in letters.CanonicalForms())
+        {
+            if (++lookups % LookupYieldInterval == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await Task.Yield();
+            }
+
+            foreach (var entry in _lexicon.WithCanonicalForm(canonicalForm))
+            {
+                if (filter.Allows(entry))
+                {
+                    yield return Match.Of(entry);
+                }
             }
         }
     }

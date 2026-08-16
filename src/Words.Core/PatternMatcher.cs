@@ -37,14 +37,14 @@ public sealed class PatternMatcher
     /// <summary>
     /// Compiles a pattern, case-insensitively.
     /// </summary>
-    /// <exception cref="PatternSyntaxException">The pattern is empty or malformed.</exception>
+    /// <exception cref="QuerySyntaxException">The pattern is empty or malformed.</exception>
     public static PatternMatcher Compile(string pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern);
 
         if (pattern.Length == 0)
         {
-            throw new PatternSyntaxException(pattern, 1, "The pattern is empty.");
+            throw new QuerySyntaxException(pattern, 1, "The pattern is empty.");
         }
 
         var masks = new List<uint>(pattern.Length);
@@ -67,13 +67,13 @@ public sealed class PatternMatcher
                     break;
 
                 case ']':
-                    throw new PatternSyntaxException(
+                    throw new QuerySyntaxException(
                         pattern, i + 1, "']' has no matching '['.");
 
                 default:
                     if (!IsLetter(c))
                     {
-                        throw new PatternSyntaxException(
+                        throw new QuerySyntaxException(
                             pattern,
                             i + 1,
                             $"'{c}' is not allowed in a pattern. Use letters, '?' or '.' for one unknown "
@@ -111,7 +111,7 @@ public sealed class PatternMatcher
         {
             if (!IsLetter(pattern[j]))
             {
-                throw new PatternSyntaxException(
+                throw new QuerySyntaxException(
                     pattern, j + 1, $"'{pattern[j]}' is not a letter, so it cannot appear inside '[...]'.");
             }
 
@@ -121,12 +121,12 @@ public sealed class PatternMatcher
 
         if (j >= pattern.Length)
         {
-            throw new PatternSyntaxException(pattern, open + 1, "'[' has no matching ']'.");
+            throw new QuerySyntaxException(pattern, open + 1, "'[' has no matching ']'.");
         }
 
         if (mask == 0)
         {
-            throw new PatternSyntaxException(
+            throw new QuerySyntaxException(
                 pattern, open + 1, "'[]' lists no letters, so nothing could match it.");
         }
 

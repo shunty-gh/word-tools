@@ -6,10 +6,9 @@ One engine answers letter-shaped questions about a fixed body of English words. 
 command line is the first front end; MAUI (macOS, Windows, Android, iOS) and a web app are
 planned against the same engine.
 
-> **Status: early, but the crossword solver works.** `words pattern` is usable now, in a
-> minimal form — no `--json`, `--limit` or `--sort` yet. **`words anagram` does not exist**;
-> it arrives in phase 4. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and what
-> is next.
+> **Status: early, but both solvers work.** `words pattern` and `words anagram` are usable
+> now, in minimal form — no `--json`, `--limit` or `--sort` yet, and no `--compose` for
+> multi-word anagrams. See [docs/plan-cli.md](docs/plan-cli.md) for what is done and next.
 
 ## What it does
 
@@ -41,16 +40,34 @@ cut
 Grids have no spaces, so a phrase answer matches straight through it — which is why
 `RED.ERRING` finds `red herring`.
 
-**Anagram solver** *(phase 4, not yet built)*. Give it your letters, using `?` for one you
-don't know yet:
+**Anagram solver.** Give it your letters, using `.` or `?` for one you don't know yet:
 
-```
-words anagram "trisec?"
+```console
+$ words anagram listen
+elints
+enlist
+inlet's
+inlets
+Intel's
+lets in
+listen
+silent
+tinsel
+
+$ words anagram trisec.
+atresic
+cistern
+credits
+cretins
+...
 ```
 
-Here `?` is a blank: an unknown letter with no fixed position, and it is always used, so an
-answer's length is the letters you gave plus the blanks. Up to three are allowed. With
-`--compose`, answers may also be built from two or more separate words.
+Here `.` is a blank: an unknown letter with no fixed position. It is always used, so an
+answer's length is the letters you gave plus the blanks — up to three. Case, accents,
+spaces, hyphens and apostrophes in your input are all forgiven, so a phrase can be pasted
+straight in.
+
+Multi-word answers built from several separate words (`--compose`) are not implemented yet.
 
 The same `?` therefore means two different things — a *cell* in a pattern, a *blank* in an
 anagram. That is what solvers already type, so the character is shared even though the
