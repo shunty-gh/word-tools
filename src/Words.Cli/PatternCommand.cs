@@ -20,15 +20,11 @@ internal static class PatternCommand
           words pattern "A??D"        '?' means the same as '.', but must be quoted
           words pattern "C[aeiou]T"   C, then a vowel, then T — quote it too
 
-        The usage line shows quotes because '?' and '[abc]' are shell wildcards: zsh
-        refuses to run the command at all when an unquoted pattern matches no files, and
-        bash silently passes it through, so the same command works on one machine and
-        fails on another. '.' is not a wildcard, so a pattern of letters and dots is
-        always safe to type bare. Single and double quotes both work.
+        Patterns using '?' or '[abc]' must be quoted. Use '.' instead and you can
+        normally do without. If in doubt, quote it — single or double.
 
         A pattern's length fixes the answer's length exactly, and '?' and '.' both mean
-        exactly one letter — this is not a regular expression, where '?' would mean
-        "zero or one".
+        exactly one letter.
         """;
 
     public static Command Create()
@@ -40,8 +36,7 @@ internal static class PatternCommand
         {
             Description =
                 "The letters you have and the gaps you don't: 'A..D' is four letters starting with A. "
-                + "Use [abc] or [^abc] to choose between letters. Quotes are needed for '?' and "
-                + "'[abc]', but not for '.' — see above.",
+                + "Use [abc] or [^abc] to choose between letters.",
         };
 
         // Absorbs anything extra so a shell-expanded pattern reaches the action and can be
