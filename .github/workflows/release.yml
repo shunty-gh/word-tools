@@ -1,0 +1,77 @@
+name: Release
+
+# Builds the distributable artefacts. NativeAOT cannot cross-compile, so each platform's
+# binary is built on a runner of that platform.
+#
+# Artefacts are attached to the workflow run, not published anywhere. Distribution is a
+# deliberate step: see the licensing note in docs/plan-cli.md before turning this into a
+# public release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  binaries:
+    name: ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-arm64
+          - os: windows-latest
+            rid: win-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # NativeAOT on Linux links with clang and needs zlib's headers.
+      - name: Install native toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish
+        run: dotnet publish src/Words.Cli -c Release -r ${{ matrix.rid }} -o publish/${{ matrix.rid }}
+
+      - name: Check it runs
+        run: ./publish/${{ matrix.rid }}/words pattern RED.ERRING
+        if: runner.os != 'Windows'
+
+      - name: Check it runs (Windows)
+        run: ./publish/${{ matrix.rid }}/words.exe pattern RED.ERRING
+        if: runner.os == 'Windows'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: words-${{ matrix.rid }}
+          path: |
+            publish/${{ matrix.rid }}/words
+            publish/${{ matrix.rid }}/words.exe
+          if-no-files-found: error
+
+  tool:
+    name: dotnet tool package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Pack
+        run: dotnet pack src/Words.Cli -c Release -o nupkg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: words-dotnet-tool
+          path: nupkg/*.nupkg
+          if-no-files-found: error

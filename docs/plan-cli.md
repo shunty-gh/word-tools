@@ -14,10 +14,14 @@ See [CONTEXT.md](../CONTEXT.md) for the vocabulary used throughout, and
 > distributing "word lists created from it" provided its copyright notice travels with them.
 >
 > What remains is an **attribution obligation**: both notices must ship with anything
-> distributed, including an App Store submission. That is what `words licence` (phase 6) and
-> the MAUI/web About screens exist for — treat them as release requirements, not niceties.
-> Licence texts are vendored at `data/sources/nediger-LICENSE.txt` and
-> `data/sources/esdb-COPYRIGHT.txt`. See [ADR 0004](./adr/0004-scowl-nediger-lexicon.md).
+> distributed, including an App Store submission. `words licence` satisfies this for the
+> CLI — the texts are embedded in `Words.Core`, so they travel inside the binary — and the
+> MAUI/web About screens must do the same. See
+> [ADR 0004](./adr/0004-scowl-nediger-lexicon.md).
+>
+> **The project itself has no licence.** There is no `LICENSE` file, so the NuGet package
+> declares no terms. That is fine while this is in-house; it needs deciding before anything
+> is published, and it is a separate question from the word lists' terms above.
 
 ## Layout
 
@@ -330,12 +334,49 @@ measuring on a real device before MAUI work starts, not after.
 
 *Done.* 211 tests green; benchmark baselines recorded above.
 
-### 8 — Packaging
+### 8 — Packaging ✅
 
-Publish as a `dotnet tool`, and as NativeAOT self-contained single-file binaries per
-platform. AOT removes JIT warm-up from a process that runs once per query.
+**NativeAOT.** `dotnet publish -r <rid>` produces a single 6.4 MB binary (the embedded
+lexicon is 2.1 MB of that). On macOS it links only against system libraries — `libSystem`,
+`CoreFoundation`, `libicucore` — with no .NET runtime dependency of any kind. It picks up
+the OS's ICU, so diacritic folding still works: `words anagram "naïve"` finds `naive` and
+`naïve` alike, which is the thing `InvariantGlobalization` would have broken.
 
-*Done when:* both artefacts run on a machine with no .NET SDK installed.
+**AOT publish caught a real defect.** `LexiconManifest.ToJson()` was still using the
+reflection-based serialiser (IL2026/IL3050) while the CLI's output had been
+source-generated since phase 6. It now uses a generated context, and the committed manifest
+is byte-identical after the change.
+
+**How much AOT actually buys, measured over 10 runs each:**
+
+| | JIT | AOT |
+| --- | ---: | ---: |
+| `words licence` (no lexicon load) | 28 ms | **5 ms** |
+| `words pattern C.T` | 146 ms | 103 ms |
+| `words anagram listen` | 295 ms | 265 ms |
+
+AOT removes a fixed ~25–45 ms of runtime and JIT start-up. That is most of the cost for
+commands that do not touch the lexicon, and a third of a pattern query — but the lexicon
+load dominates everything else, and AOT does nothing for it. **If queries need to get
+faster, the load path is the lever, not AOT.**
+
+**dotnet tool.** Packs as `Shunty.Words` with `ToolCommandName` of `words`, verified by
+installing to a scratch tool path and running real queries. The package is 2.4 MB.
+
+**Cross-compilation is not possible with AOT**, so `.github/workflows/release.yml` builds on
+a matrix of `ubuntu-latest`, `macos-latest` and `windows-latest`. It attaches artefacts to
+the workflow run rather than publishing them; making it a public release is a deliberate
+step. `dotnet pack` was also added to CI so packaging cannot break unnoticed.
+
+*Done, with two caveats.*
+
+**The exit criterion is only half-satisfiable as written.** The AOT binary genuinely needs
+nothing installed. A `dotnet tool` inherently requires the .NET runtime — that is what it is
+for. The two artefacts serve different audiences rather than both clearing the same bar.
+
+**The release workflow has never run.** It can only be validated on GitHub, and the AOT
+publish is verified on `osx-arm64` only; `linux-x64` and `win-x64` are untried, and Linux in
+particular needs the `clang`/`zlib1g-dev` step the workflow installs.
 
 ## After the CLI
 

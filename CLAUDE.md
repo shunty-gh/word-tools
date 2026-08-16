@@ -8,11 +8,14 @@ A crossword and anagram solver. A shared engine answers letter-shaped questions 
 fixed body of English words; the CLI is the first front end, with MAUI (macOS, Windows,
 Android, iOS) and a web app planned against the same engine.
 
-Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **Phases 0–7 are
-complete** — the CLI is feature-complete (`pattern`, `anagram`, `add`, `lexicon`,
-`licence`), with property-based tests and benchmark baselines. The merged lexicon (500,451
-entries) is committed at `data/lexicon.gz` and embedded into `Words.Core`. **Phase 8 is not
-started** — no packaging as a `dotnet tool` or NativeAOT binary.
+Work is phased and the plan is [docs/plan-cli.md](docs/plan-cli.md). **All eight phases are
+complete.** The CLI is feature-complete (`pattern`, `anagram`, `add`, `lexicon`, `licence`),
+with property-based tests, benchmark baselines, a `dotnet tool` package and NativeAOT
+binaries. The merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
+embedded into `Words.Core`.
+
+Next is MAUI, then the web app — both consume `Words.Core` unchanged. Read the "After the
+CLI" section of the plan first: the memory measurements there bear directly on mobile.
 
 ## Commands
 
@@ -32,6 +35,11 @@ dotnet run --project src/Words.Cli -- lexicon build data/sources -o data/lexicon
 dotnet run -c Release --project src/Words.Cli -- lexicon info
 
 dotnet run --project src/Words.Cli -- pattern "A?????R?E?T"     # note the quotes
+# Packaging. AOT cannot cross-compile: each platform's binary is built on that platform,
+# which is what .github/workflows/release.yml exists for.
+dotnet publish src/Words.Cli -c Release -r osx-arm64 -o out    # single self-contained binary
+dotnet pack src/Words.Cli -c Release -o nupkg                  # dotnet tool package
+
 # Benchmarks. Baselines are recorded in docs/plan-cli.md — compare against them.
 dotnet run -c Release --project tests/Words.Core.Benchmarks -- --filter "*QueryBenchmarks*"
 dotnet run -c Release --project tests/Words.Core.Benchmarks -- --filter "*LoadBenchmarks*"
@@ -129,6 +137,15 @@ accents, which mangles answers like `inlet's` and `café`.
 **A pattern's cost is its length bucket, not how specific it looks.** Buckets peak at nine
 letters (~58k entries) and fall away at both ends, so an 11-letter pattern is 23× the work
 of a 3-letter one. Don't assume a long, mostly-literal pattern is the cheap case.
+
+**All JSON must be source-generated.** `PublishAot` is on, so reflection-based
+`JsonSerializer.Serialize` fails the publish with IL2026/IL3050 — it will build and test
+fine and only break when packaging. Both existing contexts (`JsonResultsContext`,
+`LexiconManifestContext`) are the pattern to copy.
+
+**`InvariantGlobalization` stays false, including under AOT.** The published binary links
+the OS's ICU, which is what keeps diacritic folding working. Enabling it would silently
+break `naïve` → `NAIVE`.
 
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer

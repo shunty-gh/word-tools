@@ -25,11 +25,14 @@ public sealed record LexiconManifest(
     int RacyCount,
     int DiscardedCount)
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-    };
-
-    public string ToJson() => JsonSerializer.Serialize(this, SerializerOptions);
+    public string ToJson() => JsonSerializer.Serialize(this, LexiconManifestContext.Default.LexiconManifest);
 }
+
+/// <summary>
+/// Source-generated so the builder survives NativeAOT, which cannot use the
+/// reflection-based serialiser. Property names stay as declared, so an existing committed
+/// manifest does not churn.
+/// </summary>
+[JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.Never)]
+[JsonSerializable(typeof(LexiconManifest))]
+internal sealed partial class LexiconManifestContext : JsonSerializerContext;

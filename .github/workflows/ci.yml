@@ -24,3 +24,8 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --verbosity normal
+
+      # Catches packaging regressions without waiting for a release run. The AOT publish
+      # is not built here: it needs a per-platform runner and several minutes.
+      - name: Pack
+        run: dotnet pack src/Words.Cli -c Release -o nupkg

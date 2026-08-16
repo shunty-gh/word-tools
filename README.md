@@ -6,9 +6,8 @@ One engine answers letter-shaped questions about a fixed body of English words. 
 command line is the first front end; MAUI (macOS, Windows, Android, iOS) and a web app are
 planned against the same engine.
 
-> **Status: the command line is feature-complete.** Still to come: benchmarks, and
-> packaging so it installs as a `dotnet tool` or a standalone binary. See
-> [docs/plan-cli.md](docs/plan-cli.md).
+> **Status: the command line is complete.** Next are the MAUI app and the web app, both
+> built on the same engine. See [docs/plan-cli.md](docs/plan-cli.md).
 
 ## What it does
 
@@ -109,7 +108,25 @@ concepts are not. [CONTEXT.md](CONTEXT.md) is the glossary.
 > before the program even starts, while in bash it silently works, so the same command
 > behaves differently on different machines. Quote those, or use `.` and skip the quotes.
 
-## Getting started
+## Installing
+
+**As a standalone binary** — needs nothing installed, not even .NET. Build it for your own
+platform (NativeAOT cannot cross-compile, so this must run on the machine you want it for):
+
+```bash
+dotnet publish src/Words.Cli -c Release -r osx-arm64 -o out   # or linux-x64, win-x64
+./out/words pattern RED.ERRING
+```
+
+**As a .NET tool** — needs the .NET SDK, but installs onto your PATH:
+
+```bash
+dotnet pack src/Words.Cli -c Release -o nupkg
+dotnet tool install -g --add-source ./nupkg Shunty.Words
+words pattern RED.ERRING
+```
+
+## Building
 
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 

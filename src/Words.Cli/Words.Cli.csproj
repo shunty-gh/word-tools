@@ -6,6 +6,39 @@
     <RootNamespace>Words.Cli</RootNamespace>
   </PropertyGroup>
 
+  <!--
+    Packs as a global tool. ToolCommandName is what you type once installed; without it the
+    command would be named after the package instead. See README for the install line.
+  -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>words</ToolCommandName>
+    <IsPackable>true</IsPackable>
+    <PackageId>Shunty.Words</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Steven Hunt</Authors>
+    <Description>A crossword and anagram solver for British puzzles.</Description>
+    <PackageTags>crossword;anagram;puzzle;cli</PackageTags>
+    <RepositoryUrl>https://github.com/shunty-gh/word-tools</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!--
+    NativeAOT applies only on publish. It matters more here than for most tools: this
+    process starts, answers one question and exits, so JIT warm-up is paid on every query
+    and never amortised. Cannot cross-compile — each platform's binary is built on that
+    platform, which is what the release workflow's matrix is for.
+  -->
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../Words.Core/Words.Core.csproj" />
     <ProjectReference Include="../Words.LexiconBuilding/Words.LexiconBuilding.csproj" />
