@@ -368,15 +368,17 @@ a matrix of `ubuntu-latest`, `macos-latest` and `windows-latest`. It attaches ar
 the workflow run rather than publishing them; making it a public release is a deliberate
 step. `dotnet pack` was also added to CI so packaging cannot break unnoticed.
 
-*Done, with two caveats.*
+**The release workflow has run, on all three platforms.** Each job publishes and then runs
+`words pattern RED.ERRING` on its own binary; `osx-arm64`, `linux-x64` and `win-x64` all
+answered `red herring`, which exercises the embedded lexicon and phrase matching rather than
+just proving the binary starts. Two minutes for the whole matrix, no warnings. Artefacts,
+zipped: 4.3 MB per binary and 2.5 MB for the tool package.
+
+*Done, with one caveat.*
 
 **The exit criterion is only half-satisfiable as written.** The AOT binary genuinely needs
 nothing installed. A `dotnet tool` inherently requires the .NET runtime — that is what it is
 for. The two artefacts serve different audiences rather than both clearing the same bar.
-
-**The release workflow has never run.** It can only be validated on GitHub, and the AOT
-publish is verified on `osx-arm64` only; `linux-x64` and `win-x64` are untried, and Linux in
-particular needs the `clang`/`zlib1g-dev` step the workflow installs.
 
 ## After the CLI
 
