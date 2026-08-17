@@ -15,9 +15,9 @@ binaries. The merged lexicon (500,451 entries) is committed at `data/lexicon.gz`
 embedded into `Words.Core`.
 
 **The MAUI app works end to end**, see [docs/plan-maui.md](docs/plan-maui.md). It targets Mac
-Catalyst and iOS, and has been driven and checked on screen: both query kinds, personal words
-and the About screen. What remains is a memory measurement on a physical iOS device, and
-further platforms one at a time.
+Catalyst, iOS and Android, and has been driven and checked on screen on Mac Catalyst and an
+Android emulator: both query kinds, personal words and the About screen. What remains is a
+memory measurement on a physical device, and Windows if it is wanted.
 
 ## Commands
 
@@ -170,11 +170,10 @@ reintroduce Shell tabs expecting to control their type size.
 
 **`Words.Maui` lists only the platforms being worked on.** Adding a `TargetFrameworks` entry
 needs that platform's workload present just to build, so an entry nobody is working on breaks
-`dotnet build` for everyone and takes CI with it. **Add a platform, its CI matrix entry and
-its workload id together** — all three, or the build fails somewhere. Today that is Mac
-Catalyst and iOS; Windows cannot be built on macOS at all. The project also clears the
-repo-wide `TargetFramework` and opts out of central package management — both are
-load-bearing, see the comments in its csproj.
+`dotnet build` for everyone and takes CI with it. **Add a platform and its CI matrix entry
+together**, or the build fails somewhere. Today that is Mac Catalyst, iOS and Android; Windows cannot be built on macOS at all. The project also clears the repo-wide
+`TargetFramework` and opts out of central package management — both are load-bearing, see the
+comments in its csproj.
 
 **CI does not build the solution.** The Linux job builds `src/Words.Cli` and loops over
 `tests/*.Tests`, because the app cannot be built there; a separate macOS job builds it, one

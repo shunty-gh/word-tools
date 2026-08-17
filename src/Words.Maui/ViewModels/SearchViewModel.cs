@@ -94,9 +94,13 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
     public bool HasCells => Cells.Count > 0;
 
+    // Short enough to survive a phone's width. The longer wording these replaced was cut off
+    // mid-sentence on Android with no ellipsis, so the placeholder stopped teaching the
+    // syntax, which is the only reason it is there. `blank` is the term CONTEXT.md settles on
+    // for an anagram's unknown letter.
     public string Placeholder => IsAnagram
-        ? "Your letters, with . for each one you don't know"
-        : "Letters and gaps, like A..D or RED.ERRING";
+        ? "Your letters, with . for a blank"
+        : "Letters and gaps, like A..D";
 
     public double CrosswordOpacity => IsAnagram ? Inactive : 1;
 

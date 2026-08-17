@@ -9,10 +9,15 @@ designing a screen.
 
 ## Decisions
 
-**Mac Catalyst and iOS.** Every platform listed in `TargetFrameworks` needs its SDK present
-merely to *build*, so one nobody is working on breaks `dotnet build` for everyone and takes
-CI with it. Add a platform only alongside its CI job. Android builds but is not enabled;
-Windows cannot be built on macOS at all.
+**Mac Catalyst, iOS and Android.** Every platform listed in `TargetFrameworks` needs its
+workload present merely to *build*, so one nobody is working on breaks `dotnet build` for
+everyone and takes CI with it. Add a platform only alongside its CI job. Windows cannot be
+built on macOS at all, which is the only reason it is absent.
+
+Android shares the macOS runner rather than earning a Linux one: restore spans every
+framework the project lists whichever one is being built, so each leg installs the same
+workloads regardless. Splitting Android onto Linux would buy nothing until the project stops
+multi-targeting.
 
 **The anagram index has been reworked; the entries have not.** Retained memory is **160 MB**
 with both indexes built, down from 223 MB. The remaining 140 MB is the entries themselves.
@@ -165,8 +170,26 @@ rebuild. Acceptable for an occasional action, but if adding words becomes routin
 obvious thing to make incremental — a single entry could be merged into the loaded lexicon
 rather than discarding it.
 
+**Android is enabled and verified on screen**, on a Pixel 10 emulator: `c.t` returns the same
+9 answers in 169 ms and `listen` the same 10, `lets in` and `inlet's` included; the cell strip,
+the mode switch, the tags and About all render, and the system back gesture leaves About.
+The first anagram of a session cost 2,124 ms, then 1,150 ms on a warmer run — the same lazy
+index build seen on Mac Catalyst, exaggerated by an emulator and a Debug build.
+
+Two things Android surfaced, both now fixed:
+
+- **The placeholder was cut off** at phone width — `Your letters, with . for each one you
+  don't know` lost `know` entirely, with no ellipsis, so the one element meant to teach the
+  syntax trailed off mid-sentence. Both placeholders are now short enough to fit, which cost
+  the `RED.ERRING` example. They are shared copy, so the Apple targets changed too.
+- **The template asked for `INTERNET` and `ACCESS_NETWORK_STATE`**, which an entirely offline
+  app cannot justify on an install screen. Both are gone; the Release manifest now requests no
+  permissions at all. Debug still shows `INTERNET`, injected by the debug build for the
+  debugger, not by the manifest.
+
 Next, roughly in order:
 
-1. Measure on an iOS device, then decide on the flattened store.
-2. Add platforms one at a time, each with its CI runner.
+1. Measure on an iOS device, then decide on the flattened store. Android now has the same
+   question, and an emulator cannot answer it either — it runs on the Mac's RAM.
+2. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
 3. Possibly: merge a personal word into the loaded lexicon instead of reloading.
