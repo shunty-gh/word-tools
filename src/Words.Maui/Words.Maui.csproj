@@ -5,14 +5,13 @@
 		     project multi-targets per platform, so it has to clear that first. -->
 		<TargetFramework />
 
-		<!-- Every platform listed here needs its SDK present merely to build, so a target
-		     nobody is working on breaks `dotnet build` for everyone, not just for that
+		<!-- Every platform listed here needs its workload present merely to build, so a
+		     target nobody is working on breaks `dotnet build` for everyone, not just for that
 		     platform. Add one only alongside its CI job.
 
-		     Android is verified to build (Android SDK with API 36) but is not enabled: it is
-		     a third target on every full build and nothing has been tested there yet.
-		     Windows cannot be built on macOS at all. -->
-		<TargetFrameworks>net10.0-maccatalyst;net10.0-ios</TargetFrameworks>
+		     Windows cannot be built on macOS at all, which is why it is absent despite the
+		     Platforms/Windows folder the template left behind. -->
+		<TargetFrameworks>net10.0-maccatalyst;net10.0-ios;net10.0-android</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
