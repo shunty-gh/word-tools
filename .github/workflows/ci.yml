@@ -44,13 +44,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        framework: [net10.0-maccatalyst, net10.0-ios]
+        include:
+          - framework: net10.0-maccatalyst
+            workload: maui-maccatalyst
+          - framework: net10.0-ios
+            workload: maui-ios
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      # setup-dotnet lays down its own SDK, which has no workloads installed — the ones on
+      # the runner image belong to the image's SDK, so the build fails with NETSDK1147
+      # without this. Each leg installs only the workload for its own target rather than the
+      # whole `maui` workload, which would pull in every platform's packs on every leg.
+      - name: Install workload
+        run: dotnet workload install ${{ matrix.workload }}
 
       - name: Build
         run: dotnet build src/Words.Maui -f ${{ matrix.framework }}
