@@ -52,5 +52,17 @@ jobs:
         with:
           global-json-file: global.json
 
+      # setup-dotnet lays down its own SDK, which has no workloads installed — the ones on
+      # the runner image belong to the image's SDK, so the build fails with NETSDK1147
+      # without this.
+      #
+      # `restore` rather than installing this leg's workload alone, because restore spans
+      # every framework the project lists whichever one is being built: a Mac Catalyst build
+      # still evaluates the iOS target and demands the iOS workload. Narrowing the project
+      # with -p:TargetFrameworks would fix that and cannot be used — a global property
+      # reaches referenced projects too, and Words.Core is net10.0.
+      - name: Install workloads
+        run: dotnet workload restore src/Words.Maui/Words.Maui.csproj
+
       - name: Build
         run: dotnet build src/Words.Maui -f ${{ matrix.framework }}
