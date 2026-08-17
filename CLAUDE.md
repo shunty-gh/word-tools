@@ -14,8 +14,10 @@ with property-based tests, benchmark baselines, a `dotnet tool` package and Nati
 binaries. The merged lexicon (500,451 entries) is committed at `data/lexicon.gz` and
 embedded into `Words.Core`.
 
-**The MAUI app is started**, see [docs/plan-maui.md](docs/plan-maui.md). It targets Mac
-Catalyst only; it builds and launches, but its UI has not been visually verified yet.
+**The MAUI app works end to end**, see [docs/plan-maui.md](docs/plan-maui.md). It targets Mac
+Catalyst and iOS, and has been driven and checked on screen: both query kinds, personal words
+and the About screen. What remains is a memory measurement on a physical iOS device, and
+further platforms one at a time.
 
 ## Commands
 
@@ -166,15 +168,31 @@ small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,
 builds and none had any effect. About is reached from an ordinary `Button` instead. Don't
 reintroduce Shell tabs expecting to control their type size.
 
-**`Words.Maui` targets one platform on purpose.** Adding a `TargetFrameworks` entry needs
-that platform's SDK present just to build, so an unused entry breaks `dotnet build` for
-everyone and takes CI with it. Add a platform and its CI runner together. The project also
-clears the repo-wide `TargetFramework` and opts out of central package management — both are
+**`Words.Maui` lists only the platforms being worked on.** Adding a `TargetFrameworks` entry
+needs that platform's workload present just to build, so an entry nobody is working on breaks
+`dotnet build` for everyone and takes CI with it. **Add a platform, its CI matrix entry and
+its workload id together** — all three, or the build fails somewhere. Today that is Mac
+Catalyst and iOS; Windows cannot be built on macOS at all. The project also clears the
+repo-wide `TargetFramework` and opts out of central package management — both are
 load-bearing, see the comments in its csproj.
 
 **CI does not build the solution.** The Linux job builds `src/Words.Cli` and loops over
-`tests/*.Tests`, because Mac Catalyst cannot be built there; a separate macOS job builds the
-app. A new test project is picked up automatically; a new non-test project is not.
+`tests/*.Tests`, because the app cannot be built there; a separate macOS job builds it, one
+matrix leg per target framework. A new test project is picked up automatically; a new
+non-test project is not.
+
+**CI must install the MAUI workloads itself.** `setup-dotnet` lays down a fresh SDK from
+`global.json`, and the workloads preinstalled on the runner image belong to the *image's* SDK,
+not that one — so without an explicit `dotnet workload restore` the app build fails with
+`NETSDK1147`.
+
+It is `restore`, and installing just the leg's own workload does not work: **restore spans
+every framework the project lists, whichever one is being built**, so a Mac Catalyst leg
+still evaluates the iOS target and demands the iOS workload. `-f` narrows the build, not the
+restore. Narrowing the project with `-p:TargetFrameworks` would fix that and cannot be used —
+a global property reaches referenced projects too, so `Words.Core` is handed a Mac Catalyst
+framework and fails with `NETSDK1005`. Each leg therefore pays for every platform's packs;
+that is the cost of one project multi-targeting.
 
 **Queries compile their pattern before returning the iterator.** `QueryAsync` is not itself
 an iterator method — it validates, then returns a private one. Merging them would defer

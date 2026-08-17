@@ -44,11 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - framework: net10.0-maccatalyst
-            workload: maui-maccatalyst
-          - framework: net10.0-ios
-            workload: maui-ios
+        framework: [net10.0-maccatalyst, net10.0-ios]
     steps:
       - uses: actions/checkout@v7
 
@@ -58,10 +54,15 @@ jobs:
 
       # setup-dotnet lays down its own SDK, which has no workloads installed — the ones on
       # the runner image belong to the image's SDK, so the build fails with NETSDK1147
-      # without this. Each leg installs only the workload for its own target rather than the
-      # whole `maui` workload, which would pull in every platform's packs on every leg.
-      - name: Install workload
-        run: dotnet workload install ${{ matrix.workload }}
+      # without this.
+      #
+      # `restore` rather than installing this leg's workload alone, because restore spans
+      # every framework the project lists whichever one is being built: a Mac Catalyst build
+      # still evaluates the iOS target and demands the iOS workload. Narrowing the project
+      # with -p:TargetFrameworks would fix that and cannot be used — a global property
+      # reaches referenced projects too, and Words.Core is net10.0.
+      - name: Install workloads
+        run: dotnet workload restore src/Words.Maui/Words.Maui.csproj
 
       - name: Build
         run: dotnet build src/Words.Maui -f ${{ matrix.framework }}
