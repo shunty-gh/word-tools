@@ -98,3 +98,19 @@ A classification of an entry as a single word, a phrase, or a proper noun, used 
 include or exclude entries per query. Derived from the entry's own text rather than
 supplied by the lexicon, so it is a good guess and not an authority.
 _Avoid_: Type, category, class, tag
+
+## Looking a match up
+
+**Lookup**:
+Following a match out of the app to find out what it *means* — its definition or its
+synonyms. The lexicon holds display forms, search keys and scores and nothing else, so a
+lookup is always a question put to somebody else: the front end hands a URL to the
+browser and the solver's part ends there. Only single-entry matches are worth looking
+up; a composition is several unrelated words.
+_Avoid_: Define (that is one kind of lookup, not the category), reference, explain
+
+**Search engine**:
+The web search engine a lookup is sent to, chosen by the user and remembered. Nothing to
+do with searching the lexicon — this engine is somebody else's — and unrelated to a
+*search key* despite the shared word.
+_Avoid_: Provider, browser (the browser is what opens the URL, not what answers it)

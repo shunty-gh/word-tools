@@ -59,6 +59,18 @@
         <Setter Property="HeightRequest" Value="44" />
     </Style>
 
+    <!--
+        A secondary action sitting inside a row of answers. Smaller type and tighter padding
+        than a page button, because there are two on every row and they must not shout over
+        the answer itself — but still outlined and still 44 points tall, because it is a
+        button and has to look and behave like one (UI.md).
+    -->
+    <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
     <Style TargetType="Entry">
         <Setter Property="TextColor"
                 Value="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />

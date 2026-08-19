@@ -4,5 +4,19 @@
 	<!-- The template's INTERNET and ACCESS_NETWORK_STATE permissions are deliberately absent.
 	     The app is entirely offline: the lexicon is embedded in Words.Core and nothing in the
 	     engine or the app opens a socket. Asking for network access anyway would be a claim on
-	     the install screen that the app cannot justify. -->
+	     the install screen that the app cannot justify.
+
+	     Define and Synonyms do not change that. They hand a URL to the browser, which does
+	     the fetching in its own process under its own permissions. -->
+
+	<!-- Android 11 hides other installed apps unless they are declared here, and the system
+	     has to be able to resolve a browser before it will start one. Without this, Define
+	     and Synonyms fail on Android 11 and later. Package visibility is not a permission:
+	     nothing appears on the install screen, and the manifest still requests none. -->
+	<queries>
+		<intent>
+			<action android:name="android.intent.action.VIEW" />
+			<data android:scheme="https" />
+		</intent>
+	</queries>
 </manifest>

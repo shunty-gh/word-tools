@@ -30,12 +30,33 @@ its place through early exit and cancellation.
 
 **No workload install was needed.** Mac Catalyst builds with the .NET 10 SDK as it stands.
 
+**A lookup is a URL, not a feature.** An answer is only half of what someone wants — the
+other half is what it means — and the lexicon holds nothing that could tell them: display
+forms, search keys and scores, no definitions and no thesaurus. Shipping either would mean
+another word list and another licence to honour. So each answer carries **Define** and
+**Synonyms**, which hand a query to the user's own browser.
+
+The URLs are built in `Words.Core` (`SearchEngine`, `LookupKind`) for the reason
+`MatchOrdering` is: the app needs them now, the planned web app will need exactly the same
+ones, and two copies would drift. It is pure string work and adds no dependency; opening the
+URL stays in the front end, because only a front end knows what a browser is.
+
+**The browser is launched externally, and the app is still offline.** `BrowserLaunchMode.External`
+rather than an in-app view: the user asked for a definition, not to browse inside a crossword
+solver, and their own browser has their history and their sign-ins. It also keeps the claim in
+`AndroidManifest.xml` true — nothing here opens a socket, the browser does the fetching in its
+own process, and the manifest still requests no permissions. It did need a `<queries>` entry,
+because Android 11 hides other installed apps and the system must be able to resolve a browser
+before it will start one. Package visibility is not a permission and shows nothing on the
+install screen.
+
 ## Structure
 
 ```
 src/Words.Maui/
   Services/LexiconService.cs            loads the lexicon once, off the UI thread
   Services/AppDataPersonalWordStore.cs  personal words, same text format as the CLI
+  Services/LookupService.cs             the chosen search engine, and the browser hand-off
   ViewModels/SearchViewModel.cs         query, results, status
   MainPage.xaml                         the solver
   AboutPage.xaml                        licences — an obligation, not a courtesy
@@ -75,6 +96,21 @@ deliberately quiet, and there is no animation anywhere.
 **Answer tags.** A row carries a short word — `yours`, `name`, `phrase` — when there is
 something worth knowing at a glance while filling a grid. Untagged answers are ordinary
 single words, which is most of them.
+
+**Lookup buttons are words, not icons.** `Define` and `Synonyms` sit at the right of each
+row: outlined buttons in the secondary style, smaller type, still 44 points tall. No glyph
+for "thesaurus" is guessable, and coloured text pretending to be a link would fail the same
+test the cell strip passes — a thing you can press has to look like one. The answer label
+truncates rather than pushing them off a phone's width. A **composition** shows neither,
+because "define ace drop" is not a question with an answer; those rows appear only in
+compose mode, so an ordinary search never shows a gap.
+
+**The search engine sits in the options panel** rather than earning a settings screen. It is
+an app preference among query options, which is not tidy, but a second surface for one
+picker is one more place to look — and with Google as the default most people will never
+open it (UI.md: reduce decisions, make good defaults). The engine's stable identifier is what
+is saved, not its name or its row, so neither renaming nor reordering can silently change
+somebody's choice.
 
 UI.md changed three things that were already built: Search is now the only filled button
 where all four had been identical; every button is at least 44 points tall; and the empty
@@ -187,9 +223,24 @@ Two things Android surfaced, both now fixed:
   permissions at all. Debug still shows `INTERNET`, injected by the debug build for the
   debugger, not by the manifest.
 
+**Lookups are written but not yet driven on screen.** The URL building is covered by
+`SearchEngineTests` in `Words.Core.Tests`, but the buttons, the picker and the browser
+hand-off have not been seen running: they were added from a Linux session with no .NET SDK
+and no way to install one, so nothing in `src/Words.Maui` was compiled. Check on Mac Catalyst
+and on Android before treating this as done, and specifically:
+
+- that `Define` and `Synonyms` open the default browser rather than an in-app view, and that
+  Android 11+ resolves one at all — that is what the manifest's `<queries>` entry is for;
+- that a long answer truncates instead of pushing the buttons off a phone's width;
+- that the chosen engine survives a restart;
+- that the relative binding from inside the row reaches the view model's commands. If XAML
+  compilation objects to it, the fallback is a `TapGestureRecognizer`-free rewrite binding
+  through the page, not a loosening of `x:DataType`.
+
 Next, roughly in order:
 
-1. Measure on an iOS device, then decide on the flattened store. Android now has the same
+1. Drive the lookup buttons on screen, per the list above.
+2. Measure on an iOS device, then decide on the flattened store. Android now has the same
    question, and an emulator cannot answer it either — it runs on the Mac's RAM.
-2. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
-3. Possibly: merge a personal word into the loaded lexicon instead of reloading.
+3. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
+4. Possibly: merge a personal word into the loaded lexicon instead of reloading.

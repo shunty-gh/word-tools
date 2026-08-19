@@ -168,6 +168,19 @@ small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,
 builds and none had any effect. About is reached from an ordinary `Button` instead. Don't
 reintroduce Shell tabs expecting to control their type size.
 
+**The app is offline and its Android manifest says so — keep it that way.** The release
+manifest requests *no permissions at all*, which is a claim on the install screen. The
+`Define` and `Synonyms` buttons do not break it: they hand a URL to the browser with
+`BrowserLaunchMode.External`, so the fetching happens in the browser's process under its
+permissions. Replacing that with an in-app web view, or fetching a definition directly, would
+need `INTERNET` back. The manifest's `<queries>` entry is not a permission — it is Android 11
+package visibility, without which the system cannot resolve a browser to start.
+
+**Lookup URLs live in `Words.Core` (`SearchEngine`), not in the app**, for the reason
+`MatchOrdering` does: the planned web app needs the same URLs and two copies would drift. The
+engine's `Id` is what gets persisted, never its name or its index in `SearchEngine.All` —
+reordering that list must not change what somebody already chose.
+
 **`Words.Maui` lists only the platforms being worked on.** Adding a `TargetFrameworks` entry
 needs that platform's workload present just to build, so an entry nobody is working on breaks
 `dotnet build` for everyone and takes CI with it. **Add a platform and its CI matrix entry

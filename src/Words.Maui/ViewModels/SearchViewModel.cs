@@ -23,9 +23,17 @@ public sealed record LetterCell(string Letter, bool IsChoice)
 /// One answer, with a short tag when there is something about it worth knowing at a glance
 /// while filling a grid.
 /// </summary>
-public sealed record AnswerRow(string Answer, string Tag);
+/// <param name="CanLookUp">
+/// Whether looking this answer up on the web would tell anyone anything. A composition is
+/// several separate words that happen to use the letters up — "define ace drop" is not a
+/// question with an answer — so those rows carry no lookup buttons.
+/// </param>
+public sealed record AnswerRow(string Answer, string Tag, bool CanLookUp);
 
-public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWordStore personalWords)
+public sealed partial class SearchViewModel(
+    LexiconService lexicon,
+    IPersonalWordStore personalWords,
+    LookupService lookups)
     : ObservableObject
 {
     /// <summary>
@@ -83,6 +91,51 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
     [ObservableProperty]
     public partial int MinLengthIndex { get; set; } = 1;
+
+    // -- where a lookup goes --
+
+    /// <summary>
+    /// The engines to offer, by name. Taken from the same ordered list the index maps back
+    /// into, so unlike the pickers above these two cannot drift apart.
+    /// </summary>
+    public IReadOnlyList<string> SearchEngineNames { get; } = [.. SearchEngine.All.Select(e => e.Name)];
+
+    /// <summary>
+    /// Which engine is chosen. Remembered between launches by <see cref="LookupService"/>,
+    /// so this is the saved choice on the first frame and not a default the user has to
+    /// make again.
+    /// </summary>
+    public int SearchEngineIndex
+    {
+        get => IndexOf(lookups.Engine);
+        set
+        {
+            if (value < 0 || value >= SearchEngine.All.Count || value == SearchEngineIndex)
+            {
+                return;
+            }
+
+            lookups.Engine = SearchEngine.All[value];
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Where an engine sits in the offered list, or the first if it is somehow not offered —
+    /// a picker cannot show a selection it has no row for.
+    /// </summary>
+    private static int IndexOf(SearchEngine engine)
+    {
+        for (var index = 0; index < SearchEngine.All.Count; index++)
+        {
+            if (SearchEngine.All[index] == engine)
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
 
     public ObservableCollection<AnswerRow> Answers { get; } = [];
 
@@ -177,6 +230,37 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
     [RelayCommand]
     private void ToggleOptions() => ShowOptions = !ShowOptions;
+
+    [RelayCommand]
+    private Task DefineAsync(AnswerRow? row) => LookUpAsync(row, LookupKind.Definition);
+
+    [RelayCommand]
+    private Task SynonymsAsync(AnswerRow? row) => LookUpAsync(row, LookupKind.Synonyms);
+
+    /// <summary>
+    /// Hands the answer to the browser. Failing to open one is worth saying out loud: the
+    /// button was pressed and nothing appeared, which otherwise reads as the app being
+    /// broken.
+    /// </summary>
+    private async Task LookUpAsync(AnswerRow? row, LookupKind kind)
+    {
+        if (row is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await lookups.OpenAsync(row.Answer, kind).ConfigureAwait(true))
+            {
+                Status = "Could not open a browser.";
+            }
+        }
+        catch (Exception error)
+        {
+            Status = $"Could not open a browser: {error.Message}";
+        }
+    }
 
     /// <summary>
     /// Adds a word to the personal list and discards the loaded lexicon, so the next search
@@ -335,7 +419,9 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
         var shown = MatchOrdering.Arrange(all, sort, DisplayLimit);
 
-        return new Found([.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m)))], all.Count);
+        return new Found(
+            [.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m), CanLookUp: !m.IsComposition))],
+            all.Count);
     }
 
     private static string Describe(Found found, long elapsedMs)
