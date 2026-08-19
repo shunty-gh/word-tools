@@ -93,6 +93,21 @@ _Avoid_: Multi-word anagram, split, decomposition
 One entry used inside a composition.
 _Avoid_: Part, fragment, piece, word
 
+## Looking up
+
+**Lookup**:
+Asking the web what an answer means, or what its synonyms are, once the solver has the
+answer itself. A URL handed to the platform's default browser; the app never fetches
+anything.
+_Avoid_: Search (a search here is a query put to the engine), definition (only one of the
+two kinds), link
+
+**Web search engine**:
+Google, Bing, DuckDuckGo and the rest — where a lookup is sent, chosen once by the user
+and remembered. Always qualified as a *web* search engine, because unqualified "engine"
+in this codebase is `WordEngine`, the solver.
+_Avoid_: Provider, browser (the browser is the app that opens the URL), engine on its own
+
 **Entry kind**:
 A classification of an entry as a single word, a phrase, or a proper noun, used to
 include or exclude entries per query. Derived from the entry's own text rather than

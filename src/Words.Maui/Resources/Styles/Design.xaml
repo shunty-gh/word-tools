@@ -59,6 +59,22 @@
         <Setter Property="HeightRequest" Value="44" />
     </Style>
 
+    <!--
+        The two actions on a row of answers. Still buttons, with a border and a real target:
+        text that acts like a link but looks like prose is text nobody presses (UI.md). Shorter
+        and quieter than the page's buttons — at 44 they would make every row of a long list a
+        paragraph tall, and they must never compete with Search.
+    -->
+    <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="TextColor"
+                Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="MinimumHeightRequest" Value="36" />
+        <Setter Property="HeightRequest" Value="36" />
+    </Style>
+
     <Style TargetType="Entry">
         <Setter Property="TextColor"
                 Value="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />

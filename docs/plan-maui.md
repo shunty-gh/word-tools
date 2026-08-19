@@ -36,6 +36,7 @@ its place through early exit and cancellation.
 src/Words.Maui/
   Services/LexiconService.cs            loads the lexicon once, off the UI thread
   Services/AppDataPersonalWordStore.cs  personal words, same text format as the CLI
+  Services/LookupSettings.cs            the chosen web search engine, remembered
   ViewModels/SearchViewModel.cs         query, results, status
   MainPage.xaml                         the solver
   AboutPage.xaml                        licences — an obligation, not a courtesy
@@ -75,6 +76,25 @@ deliberately quiet, and there is no animation anywhere.
 **Answer tags.** A row carries a short word — `yours`, `name`, `phrase` — when there is
 something worth knowing at a glance while filling a grid. Untagged answers are ordinary
 single words, which is most of them.
+
+**Looking an answer up.** A grid answer is often a word the solver has never met, so each row
+carries two links — `Define` and `Synonyms` — that hand the word to the platform's default
+browser as a web search. They are small bordered buttons rather than coloured text: a link
+that looks like prose is a link nobody presses, and colour must not be the only signal
+(UI.md). They are 36 points tall rather than the page's 44, because at 44 every row of a
+five-hundred-row list would be a paragraph high.
+
+The engine is chosen once, under Options, and remembered: Google by default, with Bing,
+DuckDuckGo, Brave, Ecosia and Yahoo offered. That list is short on purpose — each extra entry
+is a decision asked of someone who came to solve a crossword. The URL building lives in
+`Words.Core.WordLookup`, for the same reason `MatchOrdering` does: the web front end will need
+it too, and two copies of a list of URLs is how one of them quietly rots.
+
+Nothing here makes the app networked. It composes a URL and hands it over; the browser fetches
+under its own permissions, and the Android manifest still asks for no permission at all. It
+does now declare `<queries>` for `VIEW`/`https`, which is package *visibility* rather than a
+permission — since Android 11 an app cannot even ask whether a browser exists without it, and
+that check is what `Launcher` makes before giving up.
 
 UI.md changed three things that were already built: Search is now the only filled button
 where all four had been identical; every button is at least 44 points tall; and the empty
@@ -187,9 +207,18 @@ Two things Android surfaced, both now fixed:
   permissions at all. Debug still shows `INTERNET`, injected by the debug build for the
   debugger, not by the manifest.
 
+**The lookup links have not been seen on screen.** They were written in an environment with no
+.NET SDK, so nothing in the app was compiled or run. The URL building is covered by unit tests
+in `Words.Core.Tests`; the app side — the two buttons per row, their ancestor-bound commands,
+the engine picker and the saved preference — needs a build and a look on Mac Catalyst and
+Android before it counts as done. Worth checking there specifically: that a row still reads at
+phone width with two buttons on it, and that `Define` on `inlet's` and on `naïve` reaches the
+browser with the word intact.
+
 Next, roughly in order:
 
-1. Measure on an iOS device, then decide on the flattened store. Android now has the same
+1. Build and check the lookup links on Mac Catalyst and Android, per the note above.
+2. Measure on an iOS device, then decide on the flattened store. Android now has the same
    question, and an emulator cannot answer it either — it runs on the Mac's RAM.
-2. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
-3. Possibly: merge a personal word into the loaded lexicon instead of reloading.
+3. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
+4. Possibly: merge a personal word into the loaded lexicon instead of reloading.

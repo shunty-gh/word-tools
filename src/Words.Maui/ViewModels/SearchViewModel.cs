@@ -25,7 +25,10 @@ public sealed record LetterCell(string Letter, bool IsChoice)
 /// </summary>
 public sealed record AnswerRow(string Answer, string Tag);
 
-public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWordStore personalWords)
+public sealed partial class SearchViewModel(
+    LexiconService lexicon,
+    IPersonalWordStore personalWords,
+    LookupSettings lookupSettings)
     : ObservableObject
 {
     /// <summary>
@@ -83,6 +86,88 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
     [ObservableProperty]
     public partial int MinLengthIndex { get; set; } = 1;
+
+    // -- looking an answer up on the web --
+
+    /// <summary>The engines offered, in the order the picker lists them.</summary>
+    public IReadOnlyList<string> LookupEngines { get; } = [.. WordLookup.Engines.Select(e => e.Name)];
+
+    private int _lookupEngineIndex = IndexOf(lookupSettings.Engine);
+
+    /// <summary>
+    /// The chosen engine, as a picker index. A preference rather than a query option: it
+    /// starts from what was saved and is written back the moment it changes, because a
+    /// person expects to choose their search engine once and never think about it again.
+    /// </summary>
+    /// <remarks>
+    /// Written by hand rather than generated, because the starting value comes from the
+    /// saved preference. A picker with nothing selected reports -1, so the index is clamped
+    /// rather than trusted.
+    /// </remarks>
+    public int LookupEngineIndex
+    {
+        get => _lookupEngineIndex;
+
+        set
+        {
+            var chosen = Math.Clamp(value, 0, WordLookup.Engines.Count - 1);
+
+            if (SetProperty(ref _lookupEngineIndex, chosen))
+            {
+                lookupSettings.Engine = WordLookup.Engines[chosen];
+            }
+        }
+    }
+
+    private static int IndexOf(WebSearchEngine engine)
+    {
+        for (var i = 0; i < WordLookup.Engines.Count; i++)
+        {
+            if (WordLookup.Engines[i].Id == engine.Id)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    [RelayCommand]
+    private Task DefineAsync(string? answer) => LookUpAsync(answer, LookupKind.Definition);
+
+    [RelayCommand]
+    private Task SynonymsAsync(string? answer) => LookUpAsync(answer, LookupKind.Synonyms);
+
+    /// <summary>
+    /// Hands the answer to the platform's browser as a web search.
+    /// </summary>
+    /// <remarks>
+    /// The app itself still opens no connection — it passes a URL to whichever browser the
+    /// platform considers default, which is why the Android manifest asks for no network
+    /// permission. If that fails there is nothing to retry, so the status line says so and
+    /// the answers stay where they are.
+    /// </remarks>
+    private async Task LookUpAsync(string? answer, LookupKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(answer))
+        {
+            return;
+        }
+
+        var engine = WordLookup.Engines[LookupEngineIndex];
+
+        try
+        {
+            if (!await Launcher.Default.OpenAsync(engine.UrlFor(kind, answer)).ConfigureAwait(true))
+            {
+                Status = $"Couldn't open a browser to look up '{answer}'.";
+            }
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            Status = $"Couldn't open a browser to look up '{answer}': {error.Message}";
+        }
+    }
 
     public ObservableCollection<AnswerRow> Answers { get; } = [];
 

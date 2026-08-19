@@ -17,7 +17,8 @@ embedded into `Words.Core`.
 **The MAUI app works end to end**, see [docs/plan-maui.md](docs/plan-maui.md). It targets Mac
 Catalyst, iOS and Android, and has been driven and checked on screen on Mac Catalyst and an
 Android emulator: both query kinds, personal words and the About screen. What remains is a
-memory measurement on a physical device, and Windows if it is wanted.
+memory measurement on a physical device, Windows if it is wanted, and a look on screen at the
+answer-row lookup links, which were added without a build.
 
 ## Commands
 
@@ -161,6 +162,12 @@ fine and only break when packaging. Both existing contexts (`JsonResultsContext`
 **`InvariantGlobalization` stays false, including under AOT.** The published binary links
 the OS's ICU, which is what keeps diacritic folding working. Enabling it would silently
 break `naïve` → `NAIVE`.
+
+**The app opens no sockets, and the Android manifest asks for no permissions.** The
+`Define` and `Synonyms` links on an answer build a URL (`Words.Core.WordLookup`) and hand it
+to the default browser, which fetches it under its own permissions. Fetching a definition
+*in* the app instead would put `INTERNET` back on the install screen for a solver that is
+otherwise entirely offline — see the comment in `AndroidManifest.xml` before going that way.
 
 **Shell's `TabBar` is deliberately not used.** On Mac Catalyst its labels render unreadably
 small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,

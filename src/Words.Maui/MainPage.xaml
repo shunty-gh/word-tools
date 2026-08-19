@@ -66,8 +66,15 @@
             <VerticalStackLayout Spacing="12">
 
                 <HorizontalStackLayout Spacing="12">
-                    <Label Text="Order" VerticalOptions="Center" WidthRequest="76" />
+                    <Label Text="Order" VerticalOptions="Center" WidthRequest="96" />
                     <Picker ItemsSource="{Binding SortOrders}" SelectedIndex="{Binding SortIndex}" WidthRequest="190" />
+                </HorizontalStackLayout>
+
+                <!-- Which search engine the Define and Synonyms links use. Chosen once and
+                     remembered, so it sits with the other settings rather than on the row. -->
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Look up with" VerticalOptions="Center" WidthRequest="96" />
+                    <Picker ItemsSource="{Binding LookupEngines}" SelectedIndex="{Binding LookupEngineIndex}" WidthRequest="190" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Spacing="12">
@@ -103,15 +110,44 @@
             <CollectionView ItemsSource="{Binding Answers}" HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:AnswerRow">
-                        <Grid ColumnDefinitions="*,Auto" Padding="16,10" ColumnSpacing="12">
-                            <Label Grid.Column="0" Text="{Binding Answer}" Style="{StaticResource Answer}" />
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,8" ColumnSpacing="8">
+                            <Label
+                                Grid.Column="0"
+                                Text="{Binding Answer}"
+                                Style="{StaticResource Answer}"
+                                LineBreakMode="CharacterWrap" />
                             <!-- A word, not a colour: the tag has to survive in black and white. -->
                             <Label
                                 Grid.Column="1"
                                 Text="{Binding Tag}"
                                 Style="{StaticResource Muted}"
                                 FontSize="13"
-                                VerticalOptions="Center" />
+                                VerticalOptions="Center"
+                                Margin="4,0" />
+                            <!--
+                                An answer you have never met is only half an answer. Both links
+                                hand the word to the browser as a web search, with the engine
+                                chosen under Options. The commands live on the page's view model,
+                                not on the row, hence the ancestor binding; the answer travels as
+                                the parameter. The spoken label names the word, so a screen reader
+                                does not read "Define" five hundred times.
+                            -->
+                            <Button
+                                Grid.Column="2"
+                                Text="Define"
+                                Style="{StaticResource RowButton}"
+                                VerticalOptions="Center"
+                                SemanticProperties.Description="{Binding Answer, StringFormat='Define {0}'}"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SearchViewModel}}, Path=DefineCommand}"
+                                CommandParameter="{Binding Answer}" />
+                            <Button
+                                Grid.Column="3"
+                                Text="Synonyms"
+                                Style="{StaticResource RowButton}"
+                                VerticalOptions="Center"
+                                SemanticProperties.Description="{Binding Answer, StringFormat='Synonyms for {0}'}"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SearchViewModel}}, Path=SynonymsCommand}"
+                                CommandParameter="{Binding Answer}" />
                         </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

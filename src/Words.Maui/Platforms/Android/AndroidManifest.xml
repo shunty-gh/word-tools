@@ -4,5 +4,19 @@
 	<!-- The template's INTERNET and ACCESS_NETWORK_STATE permissions are deliberately absent.
 	     The app is entirely offline: the lexicon is embedded in Words.Core and nothing in the
 	     engine or the app opens a socket. Asking for network access anyway would be a claim on
-	     the install screen that the app cannot justify. -->
+	     the install screen that the app cannot justify.
+
+	     Looking an answer up does not change that. The URL is handed to whichever browser the
+	     user has set as default, and that app does the fetching under its own permissions. -->
+
+	<!-- Android 11 hides other installed apps unless they are declared here. Starting a browser
+	     does not need this, but asking whether one exists does — which is what Launcher does
+	     before it gives up. It is a visibility declaration, not a permission: nothing new
+	     appears on the install screen. -->
+	<queries>
+		<intent>
+			<action android:name="android.intent.action.VIEW" />
+			<data android:scheme="https" />
+		</intent>
+	</queries>
 </manifest>
