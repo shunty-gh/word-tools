@@ -98,3 +98,18 @@ A classification of an entry as a single word, a phrase, or a proper noun, used 
 include or exclude entries per query. Derived from the entry's own text rather than
 supplied by the lexicon, so it is a good guess and not an authority.
 _Avoid_: Type, category, class, tag
+
+## Looking an answer up
+
+**Lookup**:
+A web search for what an answer means, or what else could be written in its place, opened
+in the user's own browser. Never answered by us: the lexicon is a list of answers, not a
+dictionary, and holds no definitions. Two kinds, definition and synonyms.
+_Avoid_: Definition as a thing we hold, reference, dictionary lookup
+
+**Lookup site**:
+The search engine a lookup is sent to. Chosen once by the user and remembered; a front end
+offers the list, and the URLs are built in the engine assembly so every front end builds
+them the same way.
+_Avoid_: Search engine on its own — the engine here is `WordEngine`, and a *search* is
+already what a solver asks of it

@@ -70,6 +70,13 @@
                     <Picker ItemsSource="{Binding SortOrders}" SelectedIndex="{Binding SortIndex}" WidthRequest="190" />
                 </HorizontalStackLayout>
 
+                <!-- Where Define and Synonyms send you. Remembered between launches, so it
+                     is asked once and never again. -->
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Look up" VerticalOptions="Center" WidthRequest="76" />
+                    <Picker ItemsSource="{Binding LookupSiteNames}" SelectedIndex="{Binding LookupSiteIndex}" WidthRequest="190" />
+                </HorizontalStackLayout>
+
                 <HorizontalStackLayout Spacing="12">
                     <Switch IsToggled="{Binding OnlyMyWords}" VerticalOptions="Center" />
                     <Label Text="Only words I added" VerticalOptions="Center" />
@@ -103,7 +110,9 @@
             <CollectionView ItemsSource="{Binding Answers}" HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:AnswerRow">
-                        <Grid ColumnDefinitions="*,Auto" Padding="16,10" ColumnSpacing="12">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,8" ColumnSpacing="8">
+                            <!-- Left to wrap rather than truncate: the answer is the whole
+                                 point of the row, and half of one is no use in a grid. -->
                             <Label Grid.Column="0" Text="{Binding Answer}" Style="{StaticResource Answer}" />
                             <!-- A word, not a colour: the tag has to survive in black and white. -->
                             <Label
@@ -112,6 +121,27 @@
                                 Style="{StaticResource Muted}"
                                 FontSize="13"
                                 VerticalOptions="Center" />
+                            <!--
+                                We hold no definitions, so both of these leave for the browser.
+                                Named for what you get, not for where it comes from: the engine
+                                is the user's choice and is not worth repeating on every row.
+                                The description is per answer, so a screen reader does not read
+                                out "Define" five hundred times.
+                            -->
+                            <Button
+                                Grid.Column="2"
+                                Text="Define"
+                                Style="{StaticResource LinkButton}"
+                                Command="{Binding Define}"
+                                CommandParameter="{Binding Answer}"
+                                SemanticProperties.Description="{Binding Answer, StringFormat='Define {0}'}" />
+                            <Button
+                                Grid.Column="3"
+                                Text="Synonyms"
+                                Style="{StaticResource LinkButton}"
+                                Command="{Binding Synonyms}"
+                                CommandParameter="{Binding Answer}"
+                                SemanticProperties.Description="{Binding Answer, StringFormat='Synonyms for {0}'}" />
                         </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

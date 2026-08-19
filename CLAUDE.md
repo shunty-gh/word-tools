@@ -162,6 +162,13 @@ fine and only break when packaging. Both existing contexts (`JsonResultsContext`
 the OS's ICU, which is what keeps diacritic folding working. Enabling it would silently
 break `naïve` → `NAIVE`.
 
+**The `Define` and `Synonyms` buttons need no network permission.** They hand a URL to the
+system browser, which does the fetching, so the app itself never goes online and the Release
+manifest still requests nothing — see [docs/plan-maui.md](docs/plan-maui.md). Don't add
+`INTERNET` back on account of them. The URLs are built by `LookupSites` in `Words.Core`
+rather than in the app, because the planned web front end needs the same list and the same
+escaping; nothing in that type opens a connection.
+
 **Shell's `TabBar` is deliberately not used.** On Mac Catalyst its labels render unreadably
 small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,
 `UITabBarAppearance` and `UISegmentedControl.Appearance` were each tried against clean
