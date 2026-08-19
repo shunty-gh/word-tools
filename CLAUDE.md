@@ -136,6 +136,9 @@ Survivors are chosen by likelihood — fewest words, then the weakest word — a
 into the requested display order. Applying a limit after an alphabetical sort would return
 every answer beginning with A and nothing else. It lives in the engine rather than a front
 end because the CLI and the app both need it and had begun to keep separate copies.
+`WebSearchEngines` is in `Words.Core` for the same reason — every front end that shows
+answers wants the same Define and Synonyms links. Neither breaks the no-dependencies rule:
+both are pure, and nothing in `Words.Core` opens a connection.
 
 **JSON output is source-generated** (`JsonResultsContext`) so it survives NativeAOT in
 phase 8, and uses `UnsafeRelaxedJsonEscaping` — the default encoder escapes apostrophes and
@@ -161,6 +164,13 @@ fine and only break when packaging. Both existing contexts (`JsonResultsContext`
 **`InvariantGlobalization` stays false, including under AOT.** The published binary links
 the OS's ICU, which is what keeps diacritic folding working. Enabling it would silently
 break `naïve` → `NAIVE`.
+
+**The answer links need a `<queries>` element in the Android manifest**, not a permission.
+From Android 11 an app cannot see which other apps could handle an intent unless it declares
+the kind it means to ask about, so without the `ACTION_VIEW`/`https` entry the Launcher
+reports no browser and Define and Synonyms quietly do nothing. It appears nowhere on the
+install screen, so it does not undo the deliberate absence of `INTERNET` — the browser does
+the network, under its own permission ([ADR 0007](docs/adr/0007-answers-link-out-to-a-search-engine.md)).
 
 **Shell's `TabBar` is deliberately not used.** On Mac Catalyst its labels render unreadably
 small and no UIKit appearance API reaches them — `UITabBarItem.Appearance`,

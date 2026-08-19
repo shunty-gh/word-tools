@@ -59,6 +59,21 @@
         <Setter Property="HeightRequest" Value="44" />
     </Style>
 
+    <!--
+        The Define and Synonyms links on an answer row. Outlined like the secondary buttons
+        and simply smaller, because a row has to hold two of them beside the answer: a border
+        is what says "button" here, so they still read as pressable in black and white. They
+        are not tinted with the accent — Search stays the only coloured thing on the screen.
+    -->
+    <Style x:Key="RowLink" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="MinimumHeightRequest" Value="34" />
+        <Setter Property="HeightRequest" Value="34" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
     <Style TargetType="Entry">
         <Setter Property="TextColor"
                 Value="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
