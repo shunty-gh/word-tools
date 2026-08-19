@@ -21,12 +21,16 @@ public sealed record LetterCell(string Letter, bool IsChoice)
 
 /// <summary>
 /// One answer, with a short tag when there is something about it worth knowing at a glance
-/// while filling a grid.
+/// while filling a grid, and the links that look it up on the web.
 /// </summary>
-public sealed record AnswerRow(string Answer, string Tag);
+/// <param name="CanLookUp">
+/// Whether looking this answer up would mean anything. A composition is several words that
+/// happen to use the right letters, so it has no definition and no synonyms; the links are
+/// hidden rather than shown leading nowhere useful.
+/// </param>
+public sealed record AnswerRow(string Answer, string Tag, bool CanLookUp, AnswerLookup Lookup);
 
-public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWordStore personalWords)
-    : ObservableObject
+public sealed partial class SearchViewModel : ObservableObject
 {
     /// <summary>
     /// A list view will happily bind thousands of rows, but nobody reads them, and a broad
@@ -37,7 +41,27 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
     /// <summary>Dims the label on the side of the switch that is not active.</summary>
     private const double Inactive = 0.4;
 
+    private readonly LexiconService _lexicon;
+    private readonly IPersonalWordStore _personalWords;
+    private readonly LookupSettings _lookupSettings;
+
+    /// <summary>The links carried by every answer row — see <see cref="AnswerLookup"/>.</summary>
+    private readonly AnswerLookup _lookup;
+
     private CancellationTokenSource? _running;
+
+    public SearchViewModel(
+        LexiconService lexicon,
+        IPersonalWordStore personalWords,
+        LookupSettings lookupSettings)
+    {
+        _lexicon = lexicon;
+        _personalWords = personalWords;
+        _lookupSettings = lookupSettings;
+        _lookup = new AnswerLookup(lookupSettings, message => Status = message);
+
+        SearchEngineIndex = WebSearchEngines.IndexOf(lookupSettings.Engine.Name);
+    }
 
     [ObservableProperty]
     public partial string Query { get; set; } = string.Empty;
@@ -67,6 +91,25 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
     [ObservableProperty]
     public partial int SortIndex { get; set; }
+
+    // -- which search engine the links on an answer use --
+
+    public IReadOnlyList<string> SearchEngines { get; } = [.. WebSearchEngines.All.Select(e => e.Name)];
+
+    [ObservableProperty]
+    public partial int SearchEngineIndex { get; set; }
+
+    /// <summary>
+    /// Remembered, so the choice is made once rather than every session. A picker reports
+    /// -1 when it has no selection, which is not a choice and must not be stored.
+    /// </summary>
+    partial void OnSearchEngineIndexChanged(int value)
+    {
+        if (value >= 0 && value < WebSearchEngines.All.Count)
+        {
+            _lookupSettings.Engine = WebSearchEngines.All[value];
+        }
+    }
 
     [ObservableProperty]
     public partial bool IncludeRacy { get; set; }
@@ -197,8 +240,8 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
             return;
         }
 
-        await personalWords.AddAsync(word).ConfigureAwait(true);
-        lexicon.Invalidate();
+        await _personalWords.AddAsync(word).ConfigureAwait(true);
+        _lexicon.Invalidate();
 
         Status = $"Added '{word}'. It will be included from your next search.";
     }
@@ -227,7 +270,7 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            var engine = await lexicon.GetEngineAsync().ConfigureAwait(true);
+            var engine = await _lexicon.GetEngineAsync().ConfigureAwait(true);
             var found = await Task.Run(
                 () => CollectAsync(engine, running.Token),
                 running.Token).ConfigureAwait(true);
@@ -335,7 +378,9 @@ public sealed partial class SearchViewModel(LexiconService lexicon, IPersonalWor
 
         var shown = MatchOrdering.Arrange(all, sort, DisplayLimit);
 
-        return new Found([.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m)))], all.Count);
+        return new Found(
+            [.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m), !m.IsComposition, _lookup))],
+            all.Count);
     }
 
     private static string Describe(Found found, long elapsedMs)

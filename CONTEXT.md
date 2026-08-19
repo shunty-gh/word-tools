@@ -115,3 +115,20 @@ and Apache 2.0 requires this project's to be passed on by redistributors, which 
 the root `NOTICE` file is for. Reproducing them is an obligation, not a courtesy — see
 [ADR 0007](docs/adr/0007-apache-2-licence.md).
 _Avoid_: Credit, acknowledgement, attribution blurb
+## Looking an answer up
+
+**Lookup**:
+Leaving the app to ask the web about an answer you already have. Exactly two kinds
+exist: a **definition** — what the answer means — and **synonyms** — what else means
+the same. The lexicon holds neither and is not going to, so a lookup answers the question
+by handing an address to the browser instead
+([ADR 0007](docs/adr/0007-answers-link-out-to-a-search-engine.md)).
+_Avoid_: Search (a search is what the solver asks *this* app), define, thesaurus
+
+**Web search engine**:
+The search service a lookup is addressed to — Google, Bing, DuckDuckGo and the rest —
+chosen once by the user and remembered. Named `WebSearchEngine` in full, never
+`SearchEngine`, because `WordEngine` is already the thing that answers queries and the
+two must not be read as relatives.
+_Avoid_: Search engine (unqualified), provider, browser (the browser is what opens the
+address, not what answers it)

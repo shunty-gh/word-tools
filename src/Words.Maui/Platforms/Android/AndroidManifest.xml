@@ -4,5 +4,20 @@
 	<!-- The template's INTERNET and ACCESS_NETWORK_STATE permissions are deliberately absent.
 	     The app is entirely offline: the lexicon is embedded in Words.Core and nothing in the
 	     engine or the app opens a socket. Asking for network access anyway would be a claim on
-	     the install screen that the app cannot justify. -->
+	     the install screen that the app cannot justify.
+
+	     The Define and Synonyms links on an answer do not change that. They hand a web address
+	     to whichever browser is installed and leave; the browser does the network, under its
+	     own permission. -->
+
+	<!-- Not a permission, and it appears nowhere on the install screen: from Android 11 an app
+	     cannot see which other apps could handle an intent unless it says which kind it means
+	     to ask about. Without this the Launcher reports no browser and the links quietly do
+	     nothing on a modern device. -->
+	<queries>
+		<intent>
+			<action android:name="android.intent.action.VIEW" />
+			<data android:scheme="https" />
+		</intent>
+	</queries>
 </manifest>
