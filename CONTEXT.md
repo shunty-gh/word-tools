@@ -98,3 +98,20 @@ A classification of an entry as a single word, a phrase, or a proper noun, used 
 include or exclude entries per query. Derived from the entry's own text rather than
 supplied by the lexicon, so it is a good guess and not an authority.
 _Avoid_: Type, category, class, tag
+
+## Terms
+
+**Licence**:
+The terms something shipped with the app is used under — either the program's own
+(Apache 2.0) or a bundled word list's. Not lexicon-specific: `Licences.Program` and
+`Licences.WordLists` are the same shape and are displayed the same way. British spelling
+throughout, including the `words licence` command; the root file is `LICENSE` only
+because that is the spelling GitHub, NuGet and SPDX tooling look for.
+_Avoid_: License (in code and prose), terms, legal, EULA
+
+**Notice**:
+The attribution that must travel with anything distributed. Each word list requires one,
+and Apache 2.0 requires this project's to be passed on by redistributors, which is what
+the root `NOTICE` file is for. Reproducing them is an obligation, not a courtesy — see
+[ADR 0007](docs/adr/0007-apache-2-licence.md).
+_Avoid_: Credit, acknowledgement, attribution blurb

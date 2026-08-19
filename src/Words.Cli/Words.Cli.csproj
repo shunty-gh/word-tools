@@ -21,6 +21,7 @@
     <PackageTags>crossword;anagram;puzzle;cli</PackageTags>
     <RepositoryUrl>https://github.com/shunty-gh/word-tools</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
 
   <!--
@@ -35,8 +36,15 @@
     <StripSymbols>true</StripSymbols>
   </PropertyGroup>
 
+  <!--
+    NOTICE is packed because Apache 2.0 obliges anyone redistributing this to pass it on,
+    and PackageLicenseExpression only records the SPDX identifier — it ships no file. The
+    licence texts themselves are embedded in Words.Core, so `words licence` works from a
+    binary with nothing beside it.
+  -->
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../NOTICE" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
