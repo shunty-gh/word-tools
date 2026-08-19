@@ -220,6 +220,19 @@ for more coverage would pull in terms from the list ADR 0004 deliberately droppe
 distributed. `words licence` and the MAUI/web About screens are release requirements, not
 niceties ([ADR 0004](docs/adr/0004-scowl-nediger-lexicon.md)).
 
+**The project's own licence is Apache 2.0, and it stops at the code.** It does not cover the
+bundled word lists, which are third-party and keep their own terms — including
+`data/lexicon.gz` and the copy embedded in `Words.Core`, both derived from them. Don't write
+anything implying the repo root's `LICENSE` covers everything in the repository; `NOTICE`
+draws the boundary ([ADR 0007](docs/adr/0007-apache-2-licence.md)). `LICENSE` is a verbatim
+copy of the canonical text — don't edit it, including to fill in the appendix placeholder,
+or licence-detection tooling stops recognising it.
+
+**All three licence texts are embedded in `Words.Core`**, not just the word lists', because
+Apache §4(a) obliges a copy to reach whoever the program does and a self-contained binary
+has nothing beside it. They live in the engine rather than the CLI because every front end
+owes the same obligation. A new front end is not finished until it displays them.
+
 **`data/lexicon.gz` is generated but committed**, and embedded into `Words.Core` at build
 time. Don't hand-edit it, and don't regenerate it casually — a rebuild from unchanged
 inputs is byte-identical by design, so any diff means an input actually changed. The

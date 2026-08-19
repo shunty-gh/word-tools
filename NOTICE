@@ -1,0 +1,51 @@
+Words — a crossword and anagram solver for British puzzles.
+Copyright 2026 Steven Hunt
+
+This product is licensed under the Apache License, Version 2.0. A copy of that
+licence is in the LICENSE file beside this one.
+
+The file is spelled LICENSE, against this project's British usage everywhere
+else, because that is the name GitHub, NuGet and SPDX tooling look for.
+
+-------------------------------------------------------------------------------
+Scope
+-------------------------------------------------------------------------------
+
+The Apache licence covers this project's own source code and documentation. It
+does NOT cover the word lists the project bundles. Those are third-party works,
+included under their own terms and remaining under them — neither this project
+nor anyone redistributing it can relicense them.
+
+That includes the built artefact `data/lexicon.gz` and the copy of it embedded
+in the Words.Core assembly: both are word lists derived from the sources below,
+which permit derivation but require their notices to travel with the result.
+
+Anything distributing this software, in source or binary form, must carry the
+notices below. `words licence` prints them, and the apps' About screen shows
+them, which is why those are release requirements rather than courtesies. See
+docs/adr/0004-scowl-nediger-lexicon.md.
+
+-------------------------------------------------------------------------------
+Third-party word lists
+-------------------------------------------------------------------------------
+
+English Speller Database (ESDB, formerly SCOWL)
+Copyright 2000-2026 Kevin Atkinson
+
+    Permission to use, copy, modify, distribute, and sell any part of the
+    English Speller Database (ESDB, previously known as SCOWLv2), or word lists
+    created from it, is hereby granted without fee, provided that the above
+    copyright notice appears in all copies and that both the above copyright
+    notice and this notice appear in supporting documentation. Kevin Atkinson
+    makes no representations about the suitability of this database for any
+    purpose. It is provided "as is" without express or implied warranty.
+
+    Full notice, including the terms that attach to other list sizes and
+    dialects: data/sources/esdb-COPYRIGHT.txt
+
+Nediger word list
+Copyright (c) 2026 bewilderingly
+
+    Licensed under the MIT License.
+
+    Full notice: data/sources/nediger-LICENSE.txt

@@ -175,6 +175,8 @@ wherever the program does.
 - **ESDB** — © 2000–2026 Kevin Atkinson, which permits distributing word lists created from
   it provided the notice is included. See `data/sources/esdb-COPYRIGHT.txt`.
 
+These are separate from this project's own licence, below, and are not covered by it.
+
 ## Layout
 
 ```
@@ -202,3 +204,16 @@ The decisions worth knowing about are recorded as ADRs:
 - [0005](docs/adr/0005-clue-databases-deferred.md) — why clue databases are out of scope
 - [0006](docs/adr/0006-lexicon-loads-from-ordered-sources.md) — why the lexicon loads from
   an ordered set of sources
+- [0007](docs/adr/0007-apache-2-licence.md) — why Apache 2.0, and why it stops at the code
+
+## Licence
+
+Free to use, modify and redistribute under the **Apache License 2.0** — see
+[LICENSE](LICENSE). © 2026 Steven Hunt.
+
+That covers this project's code. It does **not** cover the bundled word lists: ESDB and
+Nediger are third-party, permissively licensed, and stay under their own terms, which
+neither this project nor anyone redistributing it can change. [NOTICE](NOTICE) sets out the
+boundary and carries both attributions; if you redistribute this, that file travels with
+it. `words licence` prints everything — this licence and both word lists' — from the binary
+itself.

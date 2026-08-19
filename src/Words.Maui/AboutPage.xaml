@@ -12,6 +12,18 @@
             <Label Text="Words" FontSize="30" FontAttributes="Bold" />
             <Label Text="A crossword and anagram solver for British puzzles." FontSize="17" />
 
+            <!--
+                The app's own terms, in the same shape as the word lists' below rather than
+                behind a "view licence" tap: Apache 2.0 wants a copy of the licence to reach
+                whoever the app reaches, and one screen that simply shows everything is both
+                fewer decisions for the reader and harder to get wrong at release.
+            -->
+            <VerticalStackLayout Spacing="8" Margin="0,16,0,0">
+                <Label Text="{Binding AppLicence.Source}" FontAttributes="Bold" FontSize="19" />
+                <Label Text="{Binding AppLicence.Summary}" />
+                <Label Text="{Binding AppLicence.Text}" Style="{StaticResource Muted}" FontSize="13" FontFamily="Monospace" />
+            </VerticalStackLayout>
+
             <Label
                 Text="The word lists bundled with this app are used under the following terms."
                 Style="{StaticResource Muted}"
@@ -21,9 +33,9 @@
                 Not decoration: both word lists require their notice to accompany anything
                 distributed, so this screen is a release requirement.
             -->
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Licences}" Spacing="24">
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding WordListLicences}" Spacing="24">
                 <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="core:LexiconLicence">
+                    <DataTemplate x:DataType="core:Licence">
                         <VerticalStackLayout Spacing="8">
                             <Label Text="{Binding Source}" FontAttributes="Bold" FontSize="19" />
                             <Label Text="{Binding Summary}" />

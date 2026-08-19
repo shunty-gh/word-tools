@@ -16,10 +16,15 @@
   </ItemGroup>
 
   <!--
-    The word lists' licences require their notices to travel with anything distributed, so
-    they are embedded rather than left as files beside the binary.
+    Licence texts have to reach whoever runs the program, not merely sit in the repository:
+    Apache 2.0 requires a copy to accompany what is distributed, and both word lists require
+    their notice to. A self-contained binary has nothing beside it, so all three are embedded
+    rather than left as files. Words.Core carries the program's own licence, rather than the
+    CLI, because every front end owes the same obligation.
   -->
   <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../LICENSE"
+                      LogicalName="Words.Core.licences.apache-2.0.txt" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../data/sources/esdb-COPYRIGHT.txt"
                       LogicalName="Words.Core.licences.esdb.txt" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../data/sources/nediger-LICENSE.txt"
