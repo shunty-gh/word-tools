@@ -70,11 +70,11 @@
                     <Picker ItemsSource="{Binding SortOrders}" SelectedIndex="{Binding SortIndex}" WidthRequest="190" />
                 </HorizontalStackLayout>
 
-                <!-- Where Define and Synonyms send you. Remembered between launches, so it
-                     is asked once and never again. -->
+                <!-- Which search engine the Define and Synonyms links on an answer use.
+                     Remembered between runs, so it is a choice made once. -->
                 <HorizontalStackLayout Spacing="12">
                     <Label Text="Look up" VerticalOptions="Center" WidthRequest="76" />
-                    <Picker ItemsSource="{Binding LookupSiteNames}" SelectedIndex="{Binding LookupSiteIndex}" WidthRequest="190" />
+                    <Picker ItemsSource="{Binding SearchEngines}" SelectedIndex="{Binding SearchEngineIndex}" WidthRequest="190" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Spacing="12">
@@ -110,38 +110,39 @@
             <CollectionView ItemsSource="{Binding Answers}" HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:AnswerRow">
-                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,8" ColumnSpacing="8">
-                            <!-- Left to wrap rather than truncate: the answer is the whole
-                                 point of the row, and half of one is no use in a grid. -->
-                            <Label Grid.Column="0" Text="{Binding Answer}" Style="{StaticResource Answer}" />
-                            <!-- A word, not a colour: the tag has to survive in black and white. -->
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,8" ColumnSpacing="10">
+                            <!-- Wraps rather than truncates: the answer is the whole point of
+                                 the row, so it is never the thing that gets cut off. -->
+                            <Label
+                                Grid.Column="0"
+                                Text="{Binding Answer}"
+                                Style="{StaticResource Answer}"
+                                LineBreakMode="WordWrap" />
+                            <!-- A word, not a colour: the tag has to survive in black and white.
+                                 Empty for most answers, and then it takes no width. -->
                             <Label
                                 Grid.Column="1"
                                 Text="{Binding Tag}"
                                 Style="{StaticResource Muted}"
                                 FontSize="13"
                                 VerticalOptions="Center" />
-                            <!--
-                                We hold no definitions, so both of these leave for the browser.
-                                Named for what you get, not for where it comes from: the engine
-                                is the user's choice and is not worth repeating on every row.
-                                The description is per answer, so a screen reader does not read
-                                out "Define" five hundred times.
-                            -->
+                            <!-- The two things a solver wants once they have the word. Both
+                                 open the chosen search engine in the browser, and both are
+                                 hidden for a composition, which has neither. -->
                             <Button
                                 Grid.Column="2"
                                 Text="Define"
-                                Style="{StaticResource LinkButton}"
-                                Command="{Binding Define}"
-                                CommandParameter="{Binding Answer}"
-                                SemanticProperties.Description="{Binding Answer, StringFormat='Define {0}'}" />
+                                Style="{StaticResource RowLink}"
+                                IsVisible="{Binding CanLookUp}"
+                                Command="{Binding Lookup.DefineCommand}"
+                                CommandParameter="{Binding Answer}" />
                             <Button
                                 Grid.Column="3"
                                 Text="Synonyms"
-                                Style="{StaticResource LinkButton}"
-                                Command="{Binding Synonyms}"
-                                CommandParameter="{Binding Answer}"
-                                SemanticProperties.Description="{Binding Answer, StringFormat='Synonyms for {0}'}" />
+                                Style="{StaticResource RowLink}"
+                                IsVisible="{Binding CanLookUp}"
+                                Command="{Binding Lookup.SynonymsCommand}"
+                                CommandParameter="{Binding Answer}" />
                         </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

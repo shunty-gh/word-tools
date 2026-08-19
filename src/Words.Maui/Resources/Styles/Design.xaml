@@ -60,24 +60,17 @@
     </Style>
 
     <!--
-        A link out of the app, sitting in a row of answers. Bordered rather than bare
-        coloured text: hundreds of these are on screen at once, and a button has to look
-        pressable in black and white, not only in the accent (UI.md). Shorter than the
-        buttons above it because a row of answers must stay a list of answers — but not so
-        short that it cannot be hit with a thumb.
+        The Define and Synonyms links on an answer row. Outlined like the secondary buttons
+        and simply smaller, because a row has to hold two of them beside the answer: a border
+        is what says "button" here, so they still read as pressable in black and white. They
+        are not tinted with the accent — Search stays the only coloured thing on the screen.
     -->
-    <Style x:Key="LinkButton" TargetType="Button">
-        <Setter Property="BackgroundColor" Value="Transparent" />
-        <Setter Property="TextColor"
-                Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        <Setter Property="BorderColor"
-                Value="{AppThemeBinding Light={StaticResource RuleLight}, Dark={StaticResource RuleDark}}" />
-        <Setter Property="BorderWidth" Value="1" />
+    <Style x:Key="RowLink" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="CornerRadius" Value="18" />
-        <Setter Property="Padding" Value="12,0" />
-        <Setter Property="MinimumHeightRequest" Value="36" />
-        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="MinimumHeightRequest" Value="34" />
+        <Setter Property="HeightRequest" Value="34" />
         <Setter Property="VerticalOptions" Value="Center" />
     </Style>
 

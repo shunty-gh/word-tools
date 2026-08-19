@@ -102,14 +102,17 @@ _Avoid_: Type, category, class, tag
 ## Looking an answer up
 
 **Lookup**:
-A web search for what an answer means, or what else could be written in its place, opened
-in the user's own browser. Never answered by us: the lexicon is a list of answers, not a
-dictionary, and holds no definitions. Two kinds, definition and synonyms.
-_Avoid_: Definition as a thing we hold, reference, dictionary lookup
+Leaving the app to ask the web about an answer you already have. Exactly two kinds
+exist: a **definition** — what the answer means — and **synonyms** — what else means
+the same. The lexicon holds neither and is not going to, so a lookup answers the question
+by handing an address to the browser instead
+([ADR 0007](docs/adr/0007-answers-link-out-to-a-search-engine.md)).
+_Avoid_: Search (a search is what the solver asks *this* app), define, thesaurus
 
-**Lookup site**:
-The search engine a lookup is sent to. Chosen once by the user and remembered; a front end
-offers the list, and the URLs are built in the engine assembly so every front end builds
-them the same way.
-_Avoid_: Search engine on its own — the engine here is `WordEngine`, and a *search* is
-already what a solver asks of it
+**Web search engine**:
+The search service a lookup is addressed to — Google, Bing, DuckDuckGo and the rest —
+chosen once by the user and remembered. Named `WebSearchEngine` in full, never
+`SearchEngine`, because `WordEngine` is already the thing that answers queries and the
+two must not be read as relatives.
+_Avoid_: Search engine (unqualified), provider, browser (the browser is what opens the
+address, not what answers it)

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Words.Core;
@@ -22,19 +21,16 @@ public sealed record LetterCell(string Letter, bool IsChoice)
 
 /// <summary>
 /// One answer, with a short tag when there is something about it worth knowing at a glance
-/// while filling a grid, and the two ways of asking the web about it.
+/// while filling a grid, and the links that look it up on the web.
 /// </summary>
-/// <remarks>
-/// The commands are the view model's own, handed to every row rather than made per row: a
-/// search can produce hundreds of rows, and they all do the same two things.
-/// </remarks>
-public sealed record AnswerRow(string Answer, string Tag, ICommand Define, ICommand Synonyms);
+/// <param name="CanLookUp">
+/// Whether looking this answer up would mean anything. A composition is several words that
+/// happen to use the right letters, so it has no definition and no synonyms; the links are
+/// hidden rather than shown leading nowhere useful.
+/// </param>
+public sealed record AnswerRow(string Answer, string Tag, bool CanLookUp, AnswerLookup Lookup);
 
-public sealed partial class SearchViewModel(
-    LexiconService lexicon,
-    IPersonalWordStore personalWords,
-    LookupService lookups)
-    : ObservableObject
+public sealed partial class SearchViewModel : ObservableObject
 {
     /// <summary>
     /// A list view will happily bind thousands of rows, but nobody reads them, and a broad
@@ -45,7 +41,27 @@ public sealed partial class SearchViewModel(
     /// <summary>Dims the label on the side of the switch that is not active.</summary>
     private const double Inactive = 0.4;
 
+    private readonly LexiconService _lexicon;
+    private readonly IPersonalWordStore _personalWords;
+    private readonly LookupSettings _lookupSettings;
+
+    /// <summary>The links carried by every answer row — see <see cref="AnswerLookup"/>.</summary>
+    private readonly AnswerLookup _lookup;
+
     private CancellationTokenSource? _running;
+
+    public SearchViewModel(
+        LexiconService lexicon,
+        IPersonalWordStore personalWords,
+        LookupSettings lookupSettings)
+    {
+        _lexicon = lexicon;
+        _personalWords = personalWords;
+        _lookupSettings = lookupSettings;
+        _lookup = new AnswerLookup(lookupSettings, message => Status = message);
+
+        SearchEngineIndex = WebSearchEngines.IndexOf(lookupSettings.Engine.Name);
+    }
 
     [ObservableProperty]
     public partial string Query { get; set; } = string.Empty;
@@ -76,6 +92,25 @@ public sealed partial class SearchViewModel(
     [ObservableProperty]
     public partial int SortIndex { get; set; }
 
+    // -- which search engine the links on an answer use --
+
+    public IReadOnlyList<string> SearchEngines { get; } = [.. WebSearchEngines.All.Select(e => e.Name)];
+
+    [ObservableProperty]
+    public partial int SearchEngineIndex { get; set; }
+
+    /// <summary>
+    /// Remembered, so the choice is made once rather than every session. A picker reports
+    /// -1 when it has no selection, which is not a choice and must not be stored.
+    /// </summary>
+    partial void OnSearchEngineIndexChanged(int value)
+    {
+        if (value >= 0 && value < WebSearchEngines.All.Count)
+        {
+            _lookupSettings.Engine = WebSearchEngines.All[value];
+        }
+    }
+
     [ObservableProperty]
     public partial bool IncludeRacy { get; set; }
 
@@ -91,18 +126,6 @@ public sealed partial class SearchViewModel(
 
     [ObservableProperty]
     public partial int MinLengthIndex { get; set; } = 1;
-
-    // -- where a lookup goes --
-
-    /// <summary>
-    /// Named <c>…Names</c> rather than <c>LookupSites</c> because that is the name of the
-    /// type these come from, and a property of that name would hide it inside this class.
-    /// </summary>
-    public IReadOnlyList<string> LookupSiteNames { get; } = [.. LookupSites.All.Select(site => site.Name)];
-
-    /// <summary>Starts on whatever the user last chose, which is why it is not simply 0.</summary>
-    [ObservableProperty]
-    public partial int LookupSiteIndex { get; set; } = LookupSites.IndexOf(lookups.Site);
 
     public ObservableCollection<AnswerRow> Answers { get; } = [];
 
@@ -195,49 +218,8 @@ public sealed partial class SearchViewModel(
 
     partial void OnShowOptionsChanged(bool value) => OnPropertyChanged(nameof(OptionsLabel));
 
-    /// <summary>
-    /// A picker can report -1 while it is being set up, which is not a site.
-    /// </summary>
-    partial void OnLookupSiteIndexChanged(int value)
-    {
-        if (value >= 0 && value < LookupSites.All.Count)
-        {
-            lookups.Site = LookupSites.All[value];
-        }
-    }
-
     [RelayCommand]
     private void ToggleOptions() => ShowOptions = !ShowOptions;
-
-    /// <summary>
-    /// Looks the answer up in the browser. Separate commands rather than one taking a kind,
-    /// because a <see cref="Microsoft.Maui.Controls.Button"/> can carry only one command
-    /// parameter and the answer is the more useful thing to put in it.
-    /// </summary>
-    [RelayCommand]
-    private Task LookUpDefinitionAsync(string? answer) => LookUpAsync(LookupKind.Definition, answer);
-
-    [RelayCommand]
-    private Task LookUpSynonymsAsync(string? answer) => LookUpAsync(LookupKind.Synonyms, answer);
-
-    private async Task LookUpAsync(LookupKind kind, string? answer)
-    {
-        if (string.IsNullOrWhiteSpace(answer))
-        {
-            return;
-        }
-
-        try
-        {
-            await lookups.OpenAsync(kind, answer).ConfigureAwait(true);
-        }
-        catch (Exception error) when (error is not OperationCanceledException)
-        {
-            // Nothing the user did is wrong here, and there is nothing to retry, so this
-            // goes to the status line rather than a dialog they would have to dismiss.
-            Status = $"Couldn't open {lookups.Site.Name} in a browser.";
-        }
-    }
 
     /// <summary>
     /// Adds a word to the personal list and discards the loaded lexicon, so the next search
@@ -258,8 +240,8 @@ public sealed partial class SearchViewModel(
             return;
         }
 
-        await personalWords.AddAsync(word).ConfigureAwait(true);
-        lexicon.Invalidate();
+        await _personalWords.AddAsync(word).ConfigureAwait(true);
+        _lexicon.Invalidate();
 
         Status = $"Added '{word}'. It will be included from your next search.";
     }
@@ -288,20 +270,14 @@ public sealed partial class SearchViewModel(
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            var engine = await lexicon.GetEngineAsync().ConfigureAwait(true);
+            var engine = await _lexicon.GetEngineAsync().ConfigureAwait(true);
             var found = await Task.Run(
                 () => CollectAsync(engine, running.Token),
                 running.Token).ConfigureAwait(true);
 
-            // Rows are built here rather than on the background thread, so the commands they
-            // carry are first touched on the thread that will invoke them.
-            foreach (var match in found.Shown)
+            foreach (var answer in found.Shown)
             {
-                Answers.Add(new AnswerRow(
-                    match.DisplayForm,
-                    TagFor(match),
-                    LookUpDefinitionCommand,
-                    LookUpSynonymsCommand));
+                Answers.Add(answer);
             }
 
             Status = Describe(found, stopwatch.ElapsedMilliseconds);
@@ -333,7 +309,7 @@ public sealed partial class SearchViewModel(
         }
     }
 
-    private sealed record Found(IReadOnlyList<Match> Shown, int Total);
+    private sealed record Found(IReadOnlyList<AnswerRow> Shown, int Total);
 
     /// <summary>
     /// A short tag, when there is something worth knowing at a glance while filling a grid.
@@ -402,7 +378,9 @@ public sealed partial class SearchViewModel(
 
         var shown = MatchOrdering.Arrange(all, sort, DisplayLimit);
 
-        return new Found(shown, all.Count);
+        return new Found(
+            [.. shown.Select(m => new AnswerRow(m.DisplayForm, TagFor(m), !m.IsComposition, _lookup))],
+            all.Count);
     }
 
     private static string Describe(Found found, long elapsedMs)

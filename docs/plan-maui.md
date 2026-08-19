@@ -36,7 +36,9 @@ its place through early exit and cancellation.
 src/Words.Maui/
   Services/LexiconService.cs            loads the lexicon once, off the UI thread
   Services/AppDataPersonalWordStore.cs  personal words, same text format as the CLI
+  Services/LookupSettings.cs            the chosen search engine, remembered
   ViewModels/SearchViewModel.cs         query, results, status
+  ViewModels/AnswerLookup.cs            the Define and Synonyms links on a row
   MainPage.xaml                         the solver
   AboutPage.xaml                        licences — an obligation, not a courtesy
 ```
@@ -75,6 +77,15 @@ deliberately quiet, and there is no animation anywhere.
 **Answer tags.** A row carries a short word — `yours`, `name`, `phrase` — when there is
 something worth knowing at a glance while filling a grid. Untagged answers are ordinary
 single words, which is most of them.
+
+**Answer links.** A row also carries **Define** and **Synonyms**, which open the chosen search
+engine in the platform's browser — the two things a solver wants once they have the word, and
+neither is in the lexicon ([ADR 0007](./adr/0007-answers-link-out-to-a-search-engine.md)).
+They are outlined like the secondary buttons and simply smaller, so a border rather than a
+colour is what says "pressable"; Search stays the only tinted thing on the screen. A
+composition gets none, because several unrelated words have no shared definition, and the
+answer itself wraps rather than truncates — it is the point of the row, so it is never what
+gets cut off.
 
 UI.md changed three things that were already built: Search is now the only filled button
 where all four had been identical; every button is at least 44 points tall; and the empty
@@ -164,6 +175,14 @@ treating it as a problem.
 self-rolled disclosure — order, only-my-words, include-rude, and the compose bounds, which
 appear only while composing.
 
+**Answer links are built but not yet driven on screen.** Define and Synonyms sit on each
+answer row, and the engine behind them is chosen under Options — Google by default, with
+Bing, Brave, DuckDuckGo, Ecosia, Startpage and Yahoo — and remembered in `Preferences` by
+name. `WebSearchEngine` in `Words.Core` builds the address and is covered by tests; what has
+not been checked is the part only a device can answer: that the browser actually opens on Mac
+Catalyst, iOS and Android, that the row is not too crowded at phone width, and that the
+Android `<queries>` element does its job on API 30 and later.
+
 Adding a word calls `LexiconService.Invalidate()`, so the next search reloads and picks it
 up. That search cost **1,593 ms** in Debug, being a full reload plus an anagram index
 rebuild. Acceptable for an occasional action, but if adding words becomes routine it is the
@@ -208,7 +227,9 @@ Only the URL building is covered by tests. Drive it before treating it as done.
 
 Next, roughly in order:
 
-1. Measure on an iOS device, then decide on the flattened store. Android now has the same
+1. Drive the answer links on screen — Mac Catalyst, then an Android emulator on API 30 or
+   later, which is where the `<queries>` element matters — and check the row at phone width.
+2. Measure on an iOS device, then decide on the flattened store. Android now has the same
    question, and an emulator cannot answer it either — it runs on the Mac's RAM.
-2. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
-3. Possibly: merge a personal word into the loaded lexicon instead of reloading.
+3. Windows, if it is wanted, which needs a Windows runner and cannot be built on macOS.
+4. Possibly: merge a personal word into the loaded lexicon instead of reloading.
