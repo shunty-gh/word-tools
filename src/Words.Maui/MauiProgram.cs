@@ -22,6 +22,7 @@ public static class MauiProgram
         // come from.
         builder.Services.AddSingleton<IPersonalWordStore, AppDataPersonalWordStore>();
         builder.Services.AddSingleton<LexiconService>();
+        builder.Services.AddSingleton<LookupSettings>();
 
         builder.Services.AddSingleton<SearchViewModel>();
         builder.Services.AddTransient<MainPage>();
