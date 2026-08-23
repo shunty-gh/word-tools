@@ -107,24 +107,28 @@ esac
 
 echo "==> Publishing $framework"
 
-# Both architectures. A Developer ID build is downloaded by strangers on hardware you cannot
-# predict, so an arm64-only package would simply fail to launch on an Intel Mac.
+# Both architectures matter: a Developer ID build lands on hardware we cannot predict, and an
+# arm64-only package will not launch on an Intel Mac.
 #
-# The %3B is a semicolon, and it has to be escaped. MSBuild reads `;` inside a -p: argument as
-# a separator between *properties*, so the plain form is parsed as RuntimeIdentifiers=
-# maccatalyst-x64 followed by a nonsense property named maccatalyst-arm64:
+# Nothing here asks for that, deliberately. Mac Catalyst in Release already defaults to
+# maccatalyst-x64;maccatalyst-arm64 — see the note in Words.Maui.csproj — and passing the RIDs
+# on the command line does not work anyway. RuntimeIdentifiers is a project-level declaration,
+# so as a global property it collapses into the singular RuntimeIdentifier and the whole list
+# is read as one RID:
 #
-#   MSBUILD : error MSB1006: Property is not valid.
-#   Switch: maccatalyst-arm64
+#   error NETSDK1083: The specified RuntimeIdentifier
+#   'maccatalyst-x64;maccatalyst-arm64' is not recognized.
 #
-# Quoting does not help — the shell passes one argument and MSBuild splits it afterwards.
+# (Escaping the semicolon as %3B gets past MSBuild's property parser and straight into this;
+# unescaped it fails earlier still, as MSB1006.) If a future SDK stops defaulting to both, set
+# <RuntimeIdentifiers> in the csproj rather than reaching for -p: again — the architecture
+# check after the build is what would catch that happening.
 #
 # UseHardenedRuntime is not optional: notarisation rejects anything without it.
 publish_args=(
   "$project"
   -c Release
   -f "$framework"
-  -p:RuntimeIdentifiers="maccatalyst-x64%3Bmaccatalyst-arm64"
   -p:CreatePackage=true
   -p:EnableCodeSigning=true
   -p:EnablePackageSigning=true
@@ -135,6 +139,27 @@ publish_args=(
 [ -n "$version" ] && publish_args+=(-p:ApplicationDisplayVersion="$version")
 
 dotnet publish "${publish_args[@]}"
+
+# Verify the universal binary rather than trusting the Release default to stay that way. An
+# arm64-only build is not a failure — it installs and runs on Apple Silicon — so this warns
+# rather than stopping, and says what to do about it.
+app=$(find "$project/bin/Release/$framework" -name '*.app' -maxdepth 4 -print -quit 2>/dev/null || true)
+if [ -n "$app" ] && command -v lipo >/dev/null; then
+    binary="$app/Contents/MacOS/$(basename "${app%.app}")"
+    if [ -f "$binary" ]; then
+        archs=$(lipo -archs "$binary" 2>/dev/null || echo "unknown")
+        echo "==> Architectures: $archs"
+        case "$archs" in
+            *x86_64*) ;;
+            *) cat >&2 <<ARCH
+warning: this build is $archs only and will not launch on an Intel Mac.
+         Release is meant to default to both. To force it, uncomment in Words.Maui.csproj:
+             <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers>
+ARCH
+                ;;
+        esac
+    fi
+fi
 
 # MAUI writes the .pkg under the framework's own output tree rather than anywhere we choose,
 # and the exact path has moved between SDK versions — so find it rather than assume it.
