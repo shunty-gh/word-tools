@@ -110,12 +110,21 @@ echo "==> Publishing $framework"
 # Both architectures. A Developer ID build is downloaded by strangers on hardware you cannot
 # predict, so an arm64-only package would simply fail to launch on an Intel Mac.
 #
+# The %3B is a semicolon, and it has to be escaped. MSBuild reads `;` inside a -p: argument as
+# a separator between *properties*, so the plain form is parsed as RuntimeIdentifiers=
+# maccatalyst-x64 followed by a nonsense property named maccatalyst-arm64:
+#
+#   MSBUILD : error MSB1006: Property is not valid.
+#   Switch: maccatalyst-arm64
+#
+# Quoting does not help — the shell passes one argument and MSBuild splits it afterwards.
+#
 # UseHardenedRuntime is not optional: notarisation rejects anything without it.
 publish_args=(
   "$project"
   -c Release
   -f "$framework"
-  -p:RuntimeIdentifiers="maccatalyst-x64;maccatalyst-arm64"
+  -p:RuntimeIdentifiers="maccatalyst-x64%3Bmaccatalyst-arm64"
   -p:CreatePackage=true
   -p:EnableCodeSigning=true
   -p:EnablePackageSigning=true
