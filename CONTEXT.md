@@ -113,7 +113,7 @@ _Avoid_: License (in code and prose), terms, legal, EULA
 The attribution that must travel with anything distributed. Each word list requires one,
 and Apache 2.0 requires this project's to be passed on by redistributors, which is what
 the root `NOTICE` file is for. Reproducing them is an obligation, not a courtesy — see
-[ADR 0007](docs/adr/0007-apache-2-licence.md).
+[ADR 0008](docs/adr/0008-apache-2-licence.md).
 _Avoid_: Credit, acknowledgement, attribution blurb
 ## Looking an answer up
 

@@ -110,8 +110,13 @@ concepts are not. [CONTEXT.md](CONTEXT.md) is the glossary.
 
 ## Installing
 
-**As a standalone binary** — needs nothing installed, not even .NET. Build it for your own
-platform (NativeAOT cannot cross-compile, so this must run on the machine you want it for):
+**From a release** — the easiest route. Every
+[release](https://github.com/shunty-gh/word-tools/releases) carries a self-contained binary
+for Linux, macOS and Windows on both Intel and ARM. Nothing else is needed, not even .NET:
+unpack the archive and run `words`.
+
+**As a standalone binary you build yourself** — same result, from source. NativeAOT cannot
+cross-compile, so this must run on the machine you want the binary for:
 
 ```bash
 dotnet publish src/Words.Cli -c Release -r osx-arm64 -o out   # or linux-x64, win-x64
@@ -140,6 +145,18 @@ dotnet run --project src/Words.Cli -- lexicon info
 ```
 
 `lexicon info` reports what the lexicon contains and how long it takes to load.
+
+### Releasing
+
+Push a `v*` tag. The [release workflow](.github/workflows/release.yml) builds a binary on a
+runner of each platform — NativeAOT cannot cross-compile — archives each one with `LICENSE`,
+`NOTICE` and this README, packs the `dotnet tool` package, and opens a **draft** GitHub
+Release with all of it attached. Read the notes, then publish.
+
+**The tag sets the version.** `v0.2.0` produces `0.2.0` binaries and a
+`Shunty.Words.0.2.0.nupkg`; the `<Version>` in `Words.Cli.csproj` is only what local and
+dispatch builds use. Running the workflow by hand from the Actions tab builds and uploads
+the same artefacts without publishing anything, which is the way to test a change to it.
 
 ## The lexicon
 
@@ -204,7 +221,9 @@ The decisions worth knowing about are recorded as ADRs:
 - [0005](docs/adr/0005-clue-databases-deferred.md) — why clue databases are out of scope
 - [0006](docs/adr/0006-lexicon-loads-from-ordered-sources.md) — why the lexicon loads from
   an ordered set of sources
-- [0007](docs/adr/0007-apache-2-licence.md) — why Apache 2.0, and why it stops at the code
+- [0007](docs/adr/0007-answers-link-out-to-a-search-engine.md) — why answers link out to a
+  web search rather than carrying definitions
+- [0008](docs/adr/0008-apache-2-licence.md) — why Apache 2.0, and why it stops at the code
 
 ## Licence
 

@@ -19,9 +19,13 @@ See [CONTEXT.md](../CONTEXT.md) for the vocabulary used throughout, and
 > MAUI/web About screens must do the same. See
 > [ADR 0004](./adr/0004-scowl-nediger-lexicon.md).
 >
-> **The project itself has no licence.** There is no `LICENSE` file, so the NuGet package
-> declares no terms. That is fine while this is in-house; it needs deciding before anything
-> is published, and it is a separate question from the word lists' terms above.
+> **The project's own licence is settled: Apache 2.0.** `LICENSE` and `NOTICE` are at the
+> repo root, the package declares `Apache-2.0`, and the licence text is embedded alongside
+> the word lists' so `words licence` prints all three. It covers the code only — the word
+> lists stay under the terms above, and so does the artefact derived from them. See
+> [ADR 0008](./adr/0008-apache-2-licence.md).
+>
+> Nothing here blocks distribution any more.
 
 ## Layout
 
