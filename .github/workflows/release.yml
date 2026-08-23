@@ -56,9 +56,10 @@ jobs:
             rid: linux-arm64
           - os: macos-latest
             rid: osx-arm64
-          # The last Intel macOS runner. When it retires, osx-x64 either goes or moves to a
-          # self-hosted Intel Mac — an arm64 runner cannot produce an x64 AOT binary.
-          - os: macos-13
+          # The Intel Mac leg. An arm64 runner cannot produce an x64 AOT binary, so this
+          # needs a genuinely Intel runner; macos-13 was retired and no longer schedules at
+          # all, which hangs the run rather than failing it.
+          - os: macos-15-intel
             rid: osx-x64
           - os: windows-latest
             rid: win-x64
