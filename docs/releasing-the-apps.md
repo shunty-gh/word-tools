@@ -95,11 +95,26 @@ certificates come from.
 
 1. **An Apple Developer Program membership** — you have this.
 
-2. **Two certificates** in your login keychain, from
-   [developer.apple.com](https://developer.apple.com/account/resources/certificates):
-   *Developer ID Application* signs the `.app`, *Developer ID Installer* signs the `.pkg`.
-   `security find-identity -v` lists what you already have, in exactly the form the script
-   wants.
+2. **Two certificates** in your login keychain: *Developer ID Application* signs the `.app`,
+   *Developer ID Installer* signs the `.pkg`.
+
+   These are a distinct kind, and you will not have them already — an **Apple Development**
+   certificate is not a substitute. It signs without complaint and then fails notarisation,
+   which is a slow and confusing way to find out. The script checks for the right kind before
+   building anything.
+
+   Easiest way to create them is Xcode, which handles the certificate-signing request:
+   **Settings → Accounts → your Apple ID → Manage Certificates… → `+`**, once for each. Only
+   the Account Holder can, which for an individual membership is you.
+
+   They also need a **paid** Apple Developer Program membership — free Apple IDs get an Apple
+   Development certificate but not these — so check
+   [developer.apple.com/account](https://developer.apple.com/account) shows an active
+   membership first.
+
+   Then `security find-identity -v -p codesigning` lists them in exactly the form the script
+   wants. The name uses your name or organisation rather than your email, so copy what is
+   printed rather than assuming.
 
 3. **A stored notarytool credential**, so nothing handles your password at run time:
 

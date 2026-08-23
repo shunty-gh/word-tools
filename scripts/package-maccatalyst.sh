@@ -42,9 +42,68 @@ outdir="publish/maccatalyst"
 
 fail() { echo "error: $*" >&2; exit 1; }
 
-[ -n "${CODESIGN_KEY:-}" ] || fail "CODESIGN_KEY is not set. Run: security find-identity -v"
-[ -n "${PACKAGE_KEY:-}" ] || fail "PACKAGE_KEY is not set. Run: security find-identity -v"
 command -v xcrun >/dev/null || fail "xcrun not found — Xcode command line tools are required."
+
+# The certificates have to be *Developer ID* ones. An "Apple Development" or "Apple
+# Distribution" certificate signs without complaining and then fails notarisation minutes
+# later, so the wrong kind is worth catching here rather than at the end.
+identities=$(security find-identity -v -p codesigning 2>/dev/null || true)
+
+missing_identity() {
+    cat >&2 <<MISSING
+error: no "$1" certificate found in your keychain.
+
+What you have:
+$(echo "$identities" | sed 's/^/    /')
+
+An "Apple Development" certificate is not a substitute — it signs fine and then fails
+notarisation. Developer ID certificates need a paid Apple Developer Program membership;
+check developer.apple.com/account shows one before going further.
+
+To create them:
+    Xcode > Settings > Accounts > your Apple ID > Manage Certificates... > +
+        Developer ID Application
+        Developer ID Installer
+
+Then re-run: security find-identity -v -p codesigning
+MISSING
+    exit 1
+}
+
+echo "$identities" | grep -q "Developer ID Application" || missing_identity "Developer ID Application"
+echo "$identities" | grep -q "Developer ID Installer" || missing_identity "Developer ID Installer"
+
+usage_hint() {
+    cat >&2 <<HINT
+error: $1 is not set. Use the certificate name exactly as printed, quotes and all:
+
+$(echo "$identities" | grep "Developer ID" | sed 's/^/    /')
+
+    CODESIGN_KEY="Developer ID Application: ..." \\
+    PACKAGE_KEY="Developer ID Installer: ..." \\
+    $0 ${version:-0.0.0}
+HINT
+    exit 1
+}
+
+[ -n "${CODESIGN_KEY:-}" ] || usage_hint CODESIGN_KEY
+[ -n "${PACKAGE_KEY:-}" ] || usage_hint PACKAGE_KEY
+
+# A name that does not match anything in the keychain fails deep inside the build, where the
+# message is about a signing step rather than about the name being wrong.
+echo "$identities" | grep -qF "$CODESIGN_KEY" \
+    || fail "CODESIGN_KEY does not match any identity in your keychain: $CODESIGN_KEY"
+echo "$identities" | grep -qF "$PACKAGE_KEY" \
+    || fail "PACKAGE_KEY does not match any identity in your keychain: $PACKAGE_KEY"
+
+case "$CODESIGN_KEY" in
+    "Developer ID Application:"*) ;;
+    *) fail "CODESIGN_KEY must be a 'Developer ID Application' certificate, not: $CODESIGN_KEY" ;;
+esac
+case "$PACKAGE_KEY" in
+    "Developer ID Installer:"*) ;;
+    *) fail "PACKAGE_KEY must be a 'Developer ID Installer' certificate, not: $PACKAGE_KEY" ;;
+esac
 
 echo "==> Publishing $framework"
 
