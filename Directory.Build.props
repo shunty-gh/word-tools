@@ -10,6 +10,16 @@
   </PropertyGroup>
 
   <!--
+    Set here rather than per project so every assembly carries the same claim as the
+    LICENSE and NOTICE files at the repo root. Apache 2.0 covers this code only — the
+    bundled word lists are third-party and keep their own terms, which is what NOTICE
+    spells out and `words licence` prints.
+  -->
+  <PropertyGroup>
+    <Copyright>Copyright © 2026 Steven Hunt</Copyright>
+  </PropertyGroup>
+
+  <!--
     InvariantGlobalization is deliberately NOT enabled. Diacritic folding into the search
     key relies on Unicode normalisation, which needs ICU; turning it on would trade a
     small startup saving for a core correctness requirement.
