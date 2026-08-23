@@ -158,6 +158,10 @@ Release with all of it attached. Read the notes, then publish.
 dispatch builds use. Running the workflow by hand from the Actions tab builds and uploads
 the same artefacts without publishing anything, which is the way to test a change to it.
 
+The same tag builds a signed **Android APK** and attaches it too, once a keystore is
+configured — and the Mac Catalyst package is a local script. Both are set up in
+[docs/releasing-the-apps.md](docs/releasing-the-apps.md). Neither is in a store yet.
+
 ## The lexicon
 
 500,451 entries, merged from two word lists and committed to the repository, so builds need
