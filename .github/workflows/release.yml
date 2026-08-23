@@ -1,19 +1,50 @@
 name: Release
 
 # Builds the distributable artefacts. NativeAOT cannot cross-compile, so each platform's
-# binary is built on a runner of that platform.
+# binary is built on a runner of that platform — that is what the matrix is for, not
+# parallelism.
 #
-# Artefacts are attached to the workflow run, not published anywhere. Distribution is a
-# deliberate step: see the licensing note in docs/plan-cli.md before turning this into a
-# public release.
+# Two ways in, and they mean different things:
+#
+#   workflow_dispatch  a test build. Artefacts attach to the run and nothing is published,
+#                      and the version in Words.Cli.csproj is left alone — so a dispatch
+#                      build cannot be mistaken for a release.
+#   push of a v* tag   a release. The tag sets the version, and the archives and the package
+#                      are attached to a draft GitHub Release of that name.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
 
+permissions:
+  contents: read
+
 jobs:
+  # The tag is the single source of truth for a release's version, so no file has to be kept
+  # in step and no commit is needed to bump one. Words.Cli.csproj still carries a version,
+  # which is what local builds and dispatch runs use.
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      release: ${{ steps.pick.outputs.release }}
+    steps:
+      - id: pick
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            # Empty means "leave the project's own version alone".
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
   binaries:
     name: ${{ matrix.rid }}
+    needs: version
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -21,10 +52,18 @@ jobs:
         include:
           - os: ubuntu-latest
             rid: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
           - os: macos-latest
             rid: osx-arm64
+          # The last Intel macOS runner. When it retires, osx-x64 either goes or moves to a
+          # self-hosted Intel Mac — an arm64 runner cannot produce an x64 AOT binary.
+          - os: macos-13
+            rid: osx-x64
           - os: windows-latest
             rid: win-x64
+          - os: windows-11-arm
+            rid: win-arm64
 
     steps:
       - uses: actions/checkout@v7
@@ -39,26 +78,69 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
 
       - name: Publish
-        run: dotnet publish src/Words.Cli -c Release -r ${{ matrix.rid }} -o publish/${{ matrix.rid }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish src/Words.Cli -c Release -r ${{ matrix.rid }} \
+            ${{ needs.version.outputs.version && format('-p:Version={0}', needs.version.outputs.version) || '' }} \
+            -o "publish/${{ matrix.rid }}"
 
+      # A smoke test, not a test run: proves this platform's binary starts, loads the
+      # embedded lexicon and answers. `pattern` exits 0 only when something matched, and
+      # `licence` proves the embedded licence texts survived AOT trimming.
       - name: Check it runs
-        run: ./publish/${{ matrix.rid }}/words pattern RED.ERRING
-        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="publish/${{ matrix.rid }}/words"
+          if [ -f "$binary.exe" ]; then
+            binary="$binary.exe"
+          fi
+          "$binary" pattern RED.ERRING
+          "$binary" licence > /dev/null
 
-      - name: Check it runs (Windows)
-        run: ./publish/${{ matrix.rid }}/words.exe pattern RED.ERRING
+      # `words licence` prints the terms from inside the binary, but someone who downloads an
+      # archive should not have to run a program to find out what they may do with it. Apache
+      # 2.0 asks for the licence and the NOTICE to accompany what is distributed; for the
+      # binaries, this step is what does it.
+      - name: Stage the archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          cp LICENSE NOTICE README.md stage/
+          if [ -f "publish/${{ matrix.rid }}/words.exe" ]; then
+            cp "publish/${{ matrix.rid }}/words.exe" stage/
+          elif [ -f "publish/${{ matrix.rid }}/words" ]; then
+            cp "publish/${{ matrix.rid }}/words" stage/
+          else
+            echo "No binary was produced for ${{ matrix.rid }}." >&2
+            exit 1
+          fi
+          ls -l stage
+
+      # Compress-Archive rather than tar or 7z: it is part of PowerShell, so it is present on
+      # every Windows runner including the arm64 one.
+      - name: Archive (zip)
         if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path stage/* -DestinationPath words-${{ matrix.rid }}.zip
+
+      - name: Archive (tar.gz)
+        if: runner.os != 'Windows'
+        run: tar -czf words-${{ matrix.rid }}.tar.gz -C stage .
 
       - uses: actions/upload-artifact@v7
         with:
           name: words-${{ matrix.rid }}
           path: |
-            publish/${{ matrix.rid }}/words
-            publish/${{ matrix.rid }}/words.exe
+            words-${{ matrix.rid }}.tar.gz
+            words-${{ matrix.rid }}.zip
           if-no-files-found: error
 
   tool:
     name: dotnet tool package
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -68,10 +150,68 @@ jobs:
           global-json-file: global.json
 
       - name: Pack
-        run: dotnet pack src/Words.Cli -c Release -o nupkg
+        run: >
+          dotnet pack src/Words.Cli -c Release -o nupkg
+          ${{ needs.version.outputs.version && format('-p:Version={0}', needs.version.outputs.version) || '' }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: words-dotnet-tool
           path: nupkg/*.nupkg
           if-no-files-found: error
+
+  # Only on a tag. A dispatch run stops at the artefacts above, so the whole workflow can be
+  # exercised without publishing anything.
+  release:
+    name: GitHub Release
+    needs: [version, binaries, tool]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the release
+      actions: read # to read this run's artefacts back
+    steps:
+      # `gh run download` rather than the download-artifact action: it pairs with whatever
+      # uploaded the artefacts instead of having to track that action's major version.
+      - name: Collect the artefacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh run download "$GITHUB_RUN_ID" --dir artifacts
+          # Downloads arrive one directory per artefact; the release wants a flat set of
+          # files, and passing it a directory is an error.
+          mkdir -p upload
+          find artifacts -type f -exec mv -t upload/ {} +
+          ls -l upload
+
+      - name: Write the release notes
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'NOTES'
+          Self-contained binaries — no .NET runtime needed. Unpack and run `words`.
+
+          Or install it as a .NET global tool:
+
+              dotnet tool install -g Shunty.Words
+
+          The program is licensed under Apache 2.0. The bundled word lists are third-party
+          and keep their own terms — `words licence` prints all of them, and LICENSE and
+          NOTICE travel inside every archive.
+          NOTES
+
+      # Drafted rather than published: release notes deserve a read before anyone can
+      # download them, and a tag can be pushed by accident. Publishing is one click in the
+      # Releases tab.
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            upload/*

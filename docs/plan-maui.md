@@ -210,7 +210,8 @@ Two things Android surfaced, both now fixed:
 its row. Neither is answered by the app: the lexicon holds no definitions, so both open a
 search in the default browser, in whichever engine the user picked under Options — Google
 unless they say otherwise, and remembered from then on. The URLs are built in `Words.Core`
-(`LookupSites`), not in the app, because the web front end will need exactly the same thing.
+(`WebSearchEngines`), not in the app, because the web front end will need exactly the same
+thing.
 
 Two things worth knowing about that:
 

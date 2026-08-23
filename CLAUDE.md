@@ -185,6 +185,13 @@ together**, or the build fails somewhere. Today that is Mac Catalyst, iOS and An
 `TargetFramework` and opts out of central package management — both are load-bearing, see the
 comments in its csproj.
 
+**A release's version comes from the git tag, not from the csproj.** `release.yml` passes
+`-p:Version=` derived from a `v*` tag, so `<Version>` in `Words.Cli.csproj` only governs local
+and `workflow_dispatch` builds. Don't "fix" the two to agree by bumping the csproj before
+tagging — the tag is the single source of truth, and a dispatch run deliberately keeps the
+project's own version so it cannot be mistaken for a release. The release is created as a
+**draft**; publishing is a human step.
+
 **CI does not build the solution.** The Linux job builds `src/Words.Cli` and loops over
 `tests/*.Tests`, because the app cannot be built there; a separate macOS job builds it, one
 matrix leg per target framework. A new test project is picked up automatically; a new
@@ -224,7 +231,7 @@ niceties ([ADR 0004](docs/adr/0004-scowl-nediger-lexicon.md)).
 bundled word lists, which are third-party and keep their own terms — including
 `data/lexicon.gz` and the copy embedded in `Words.Core`, both derived from them. Don't write
 anything implying the repo root's `LICENSE` covers everything in the repository; `NOTICE`
-draws the boundary ([ADR 0007](docs/adr/0007-apache-2-licence.md)). `LICENSE` is a verbatim
+draws the boundary ([ADR 0008](docs/adr/0008-apache-2-licence.md)). `LICENSE` is a verbatim
 copy of the canonical text — don't edit it, including to fill in the appendix placeholder,
 or licence-detection tooling stops recognising it.
 
