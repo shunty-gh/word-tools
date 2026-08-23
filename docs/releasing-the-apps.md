@@ -33,9 +33,28 @@ keytool -genkeypair -v \
   -storetype pkcs12
 ```
 
-It asks for a password and for your name and organisation. The name shows up only in the
-certificate, not to users. Use the same value for the store and key password unless you have
-a reason not to — `-storetype pkcs12` keeps them in step anyway.
+It asks for one password, and for your name and organisation. The name shows up only in the
+certificate, not to users.
+
+**There is only ever one password here.** PKCS12 keystores cannot hold a separate key
+password, and keytool says so if you try:
+
+```
+Warning: Different store and key passwords not supported for PKCS12 KeyStores.
+         Ignoring user-specified -keypass value.
+```
+
+So the password you type is both the store password and the key password, and the two
+secrets below take the same value. The older JKS format did have two, and keytool used to
+prompt for the key password separately — which is where the expectation of two comes from.
+
+Check what you have, which also prints the alias:
+
+```bash
+keytool -list -keystore words.keystore
+```
+
+The first field of the `PrivateKeyEntry` line is the alias.
 
 ### 2. Add four repository secrets
 
@@ -44,8 +63,8 @@ Settings → Secrets and variables → Actions → New repository secret.
 | Secret | Value |
 |---|---|
 | `ANDROID_KEYSTORE_BASE64` | `base64 -i words.keystore \| pbcopy` |
-| `ANDROID_KEYSTORE_PASSWORD` | the store password |
-| `ANDROID_KEY_PASSWORD` | the key password |
+| `ANDROID_KEYSTORE_PASSWORD` | the password you typed |
+| `ANDROID_KEY_PASSWORD` | **the same password again** — see above |
 | `ANDROID_KEY_ALIAS` | `words`, or whatever `-alias` you used |
 
 The base64 step is only because a secret holds text, not a file; the workflow decodes it back
