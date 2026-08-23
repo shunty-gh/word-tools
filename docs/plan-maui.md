@@ -206,6 +206,25 @@ Two things Android surfaced, both now fixed:
   permissions at all. Debug still shows `INTERNET`, injected by the debug build for the
   debugger, not by the manifest.
 
+**Every answer can be looked up on the web**, through a `Define` and a `Synonyms` button on
+its row. Neither is answered by the app: the lexicon holds no definitions, so both open a
+search in the default browser, in whichever engine the user picked under Options — Google
+unless they say otherwise, and remembered from then on. The URLs are built in `Words.Core`
+(`LookupSites`), not in the app, because the web front end will need exactly the same thing.
+
+Two things worth knowing about that:
+
+- **It needs no permission.** Handing a URL to the system browser is not the app going online
+  — the browser does the fetching — so the Release manifest still requests nothing, and it
+  must stay that way. Do not add `INTERNET` back on account of these buttons.
+- **The browser is the system's own** (`BrowserLaunchMode.External`), not an in-app tab. The
+  ask was a link out; an in-app tab leaves the user unsure whether back dismisses the page or
+  the app.
+
+Untested on screen: this was written where no .NET SDK could be installed, so the buttons,
+the chooser and the browser hand-off have not yet been driven on Mac Catalyst or Android.
+Only the URL building is covered by tests. Drive it before treating it as done.
+
 Next, roughly in order:
 
 1. Drive the answer links on screen — Mac Catalyst, then an Android emulator on API 30 or
