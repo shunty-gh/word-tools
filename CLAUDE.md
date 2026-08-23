@@ -192,6 +192,19 @@ tagging — the tag is the single source of truth, and a dispatch run deliberate
 project's own version so it cannot be mistaken for a release. The release is created as a
 **draft**; publishing is a human step.
 
+**The Android release job builds on macOS, and that is not an oversight.** `dotnet workload
+restore` spans every framework `Words.Maui` lists whichever one is being built, so a Linux
+runner is asked for the iOS workload and fails — the same constraint that shapes the CI
+matrix. **Mac Catalyst is deliberately not in CI**: Developer ID signing and notarisation are
+proven on a real Mac through `scripts/package-maccatalyst.sh` first, because notarisation
+fails opaquely and iterating on it through CI costs minutes per attempt. See
+[docs/releasing-the-apps.md](docs/releasing-the-apps.md).
+
+**An app job that fails blocks the release; one that is skipped does not.** The `android` job
+is skipped whenever no keystore secret is configured, so the release still works without one.
+That is why `release` checks `needs.*.result` explicitly instead of relying on the default —
+a skipped dependency would otherwise skip the release too.
+
 **CI does not build the solution.** The Linux job builds `src/Words.Cli` and loops over
 `tests/*.Tests`, because the app cannot be built there; a separate macOS job builds it, one
 matrix leg per target framework. A new test project is picked up automatically; a new
